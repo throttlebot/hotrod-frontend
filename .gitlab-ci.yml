@@ -1,0 +1,30 @@
+stages:
+    - build
+
+image: docker:latest
+
+# Can use UI to hide passwords
+variables:
+    IMAGE_NAME: hotrod-frontend
+    DOCKER_DRIVER: overlay2
+
+
+services:
+    - docker:dind
+
+build:
+    stage: build
+    script:
+    - docker login -u $DOCKER_USER -p $DOCKER_PASS
+
+    # Build hotrod image
+    - docker pull $DOCKER_USER/$IMAGE_NAME:latest
+    - docker build \
+      -t $CI_REGISTRY_USER/$IMAGE_NAME:$CI_COMMIT_SHA \
+      --cache-from $DOCKER_USER/$IMAGE_NAME:latest \
+      --build-arg git_pass=$GITLAB_TOKEN \
+      --build-arg build_time=$(date +%s) .
+    - docker push $DOCKER_USER/$IMAGE_NAME:$CI_COMMIT_SHA
+    - docker tag $DOCKER_USER/$IMAGE_NAME:$CI_COMMIT_SHA  $DOCKER_USER/$IMAGE_NAME:latest
+    - docker push $DOCKER_USER/$IMAGE_NAME:latest
+
