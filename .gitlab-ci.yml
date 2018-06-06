@@ -1,6 +1,7 @@
 stages:
   - build
   - stage
+  - test
 
 image: docker:latest
 
@@ -24,7 +25,7 @@ before_script:
 
 build:
   stage: build
-  before_stage:
+  before_script:
     - echo "skip installing kubectl"
   script:
     - docker login -u $DOCKER_USER -p $DOCKER_PASS
