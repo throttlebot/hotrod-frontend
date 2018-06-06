@@ -57,4 +57,7 @@ integration:
   environment:
     name: StageEnv
   script:
+    - apk add python py-pip
+    - pip install requests
+    - kubectl rollout status deployment/$CI_ENVIRONMENT_SLUG-hotrod-frontend --namespace $KUBE_NAMESPACE
     - python server_test.py $KUBE_NAMESPACE
