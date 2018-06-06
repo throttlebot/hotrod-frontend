@@ -42,7 +42,7 @@ stage:
     - mkdir -p $HOME/.kube
     - cat $KUBECONFIG > $HOME/.kube/config
   script:
-    - sed -i -e s/COMMITID/latest/g hotrod.yaml
+    - sed -i -e s/COMMITID/$CI_COMMIT_SHA/g hotrod.yaml
     - sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
     - sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
     - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
