@@ -44,6 +44,6 @@ stage:
     - sed -i -e s/COMMITID/latest/g hotrod.yaml
     - sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
     - sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
-    - sed -i -e s/REPLICA_COUNT/1/g hotrod.yaml
+    - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
     - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
 
