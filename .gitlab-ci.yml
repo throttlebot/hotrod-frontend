@@ -12,6 +12,7 @@ variables:
     IMAGE_NAME: hotrod-frontend
     DOCKER_DRIVER: overlay2
     DOCKER_USER: willwangkelda
+    KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.10.3/bin/linux/amd64/kubectl
 
 build:
     stage: build
