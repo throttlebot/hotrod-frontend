@@ -1,6 +1,6 @@
 stages:
-    - build
-    - stage
+  - build
+  - stage
 
 image: docker:latest
 
@@ -9,15 +9,24 @@ services:
 
 # Can use UI to hide passwords
 variables:
-    IMAGE_NAME: hotrod-frontend
-    DOCKER_DRIVER: overlay2
-    DOCKER_HOST: tcp://localhost:2375
-    DOCKER_USER: willwangkelda
-    KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.10.3/bin/linux/amd64/kubectl
+  IMAGE_NAME: hotrod-frontend
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://localhost:2375
+  DOCKER_USER: willwangkelda
+  KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.10.3/bin/linux/amd64/kubectl
+
+before_script:
+  - apk update && apk add curl bash openssl
+  - curl -LO $KUBECTL_URL
+  - chmod +x ./kubectl && mv ./kubectl /usr/local/bin/kubectl
+  - mkdir -p $HOME/.kube
+  - cat $KUBECONFIG > $HOME/.kube/config
 
 build:
-    stage: build
-    script:
+  stage: build
+  before_stage:
+    - echo "skip installing kubectl"
+  script:
     - docker login -u $DOCKER_USER -p $DOCKER_PASS
 
     # Build hotrod image
@@ -35,12 +44,6 @@ stage:
   stage: stage
   environment:
       name: StageEnv
-  before_script:
-    - apk update && apk add curl bash openssl
-    - curl -LO $KUBECTL_URL
-    - chmod +x ./kubectl && mv ./kubectl /usr/local/bin/kubectl
-    - mkdir -p $HOME/.kube
-    - cat $KUBECONFIG > $HOME/.kube/config
   script:
     - sed -i -e s/COMMITID/$CI_COMMIT_SHA/g hotrod.yaml
     - sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
@@ -48,3 +51,9 @@ stage:
     - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
     - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
 
+integration:
+  stage: test
+  environment:
+    name: StageEnv
+  script:
+    - python server_test.py $KUBE_NAMESPACE
