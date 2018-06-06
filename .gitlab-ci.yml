@@ -4,6 +4,9 @@ stages:
 
 image: docker:latest
 
+services:
+  - docker:dind
+
 # Can use UI to hide passwords
 variables:
     IMAGE_NAME: hotrod-frontend
