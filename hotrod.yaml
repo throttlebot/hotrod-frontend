@@ -11,8 +11,6 @@ spec:
   ports:
   - name: hotrod-frontend
     port: 8080
-    protocol: TCP
-    targetPort: hotrod-frontend
   type: LoadBalancer
   selector:
     appName: hotrod-frontend
