@@ -60,7 +60,7 @@ integration:
     - apk add python py-pip
     - pip install requests
     - kubectl rollout status deployment/$CI_ENVIRONMENT_SLUG-hotrod-frontend --namespace $KUBE_NAMESPACE
-    - python test/external_integration_test.py $KUBE_NAMESPACE
+    - python tests/external_integration_test.py $KUBE_NAMESPACE
 
 unit:
   stage: test
@@ -70,4 +70,4 @@ unit:
     - apk add python py-pip
     - pip install requests
     - kubectl rollout status deployment/$CI_ENVIRONMENT_SLUG-hotrod-frontend --namespace $KUBE_NAMESPACE
-    - python test/frontend_unit_test.py $KUBE_NAMESPACE
+    - python tests/frontend_unit_test.py $KUBE_NAMESPACE
