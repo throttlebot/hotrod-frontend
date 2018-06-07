@@ -1,6 +1,6 @@
 stages:
-  - build
-  - stage
+#  - build
+#  - stage
   - test
 
 image: docker:latest
@@ -15,6 +15,7 @@ variables:
   DOCKER_HOST: tcp://localhost:2375
   DOCKER_USER: willwangkelda
   KUBECTL_URL: https://storage.googleapis.com/kubernetes-release/release/v1.10.3/bin/linux/amd64/kubectl
+  KUBE_NAMESPACE: hotrod
 
 before_script:
   - apk update && apk add curl bash openssl
@@ -23,34 +24,34 @@ before_script:
   - mkdir -p $HOME/.kube
   - cat $KUBECONFIG > $HOME/.kube/config
 
-build:
-  stage: build
-  before_script:
-    - echo "skip installing kubectl"
-  script:
-    - docker login -u $DOCKER_USER -p $DOCKER_PASS
-
-    # Build hotrod image
-    - docker pull $DOCKER_USER/$IMAGE_NAME:latest
-    - docker build
-      -t $DOCKER_USER/$IMAGE_NAME:$CI_COMMIT_SHA
-      --cache-from $DOCKER_USER/$IMAGE_NAME:latest
-      --build-arg git_pass=$GITLAB_TOKEN
-      --build-arg build_time=$(date +%s) .
-    - docker push $DOCKER_USER/$IMAGE_NAME:$CI_COMMIT_SHA
-    - docker tag $DOCKER_USER/$IMAGE_NAME:$CI_COMMIT_SHA  $DOCKER_USER/$IMAGE_NAME:latest
-    - docker push $DOCKER_USER/$IMAGE_NAME:latest
-
-stage:
-  stage: stage
-  environment:
-      name: StageEnv
-  script:
-    - sed -i -e s/COMMITID/$CI_COMMIT_SHA/g hotrod.yaml
-    - sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
-    - sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
-    - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
-    - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
+#build:
+#  stage: build
+#  before_script:
+#    - echo "skip installing kubectl"
+#  script:
+#    - docker login -u $DOCKER_USER -p $DOCKER_PASS
+#
+#    # Build hotrod image
+#    - docker pull $DOCKER_USER/$IMAGE_NAME:latest
+#    - docker build
+#      -t $DOCKER_USER/$IMAGE_NAME:$CI_COMMIT_SHA
+#      --cache-from $DOCKER_USER/$IMAGE_NAME:latest
+#      --build-arg git_pass=$GITLAB_TOKEN
+#      --build-arg build_time=$(date +%s) .
+#    - docker push $DOCKER_USER/$IMAGE_NAME:$CI_COMMIT_SHA
+#    - docker tag $DOCKER_USER/$IMAGE_NAME:$CI_COMMIT_SHA  $DOCKER_USER/$IMAGE_NAME:latest
+#    - docker push $DOCKER_USER/$IMAGE_NAME:latest
+#
+#stage:
+#  stage: stage
+#  environment:
+#      name: StageEnv
+#  script:
+#    - sed -i -e s/COMMITID/$CI_COMMIT_SHA/g hotrod.yaml
+#    - sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
+#    - sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
+#    - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
+#    - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
 
 integration:
   stage: test
@@ -66,6 +67,8 @@ unit:
   stage: test
   environment:
     name: StageEnv
+  variables:
+    KUBERNETES_NAMESPACE_OVERWRITE: testspace
   script:
     - apk add python py-pip
     - pip install requests
