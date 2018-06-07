@@ -1,3 +1,5 @@
+import subprocess
+
 def detect(namespace):
     while True:
         value = subprocess.check_output(command + namespace, shell=True).strip()

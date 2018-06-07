@@ -1,4 +1,5 @@
-import requests, subprocess, time, sys
+import requests, time, sys
+from detect import detect
 
 command = "kubectl get service hotrod-frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}' -n "
 
