@@ -12,4 +12,4 @@ def test(host, port):
 
 if __name__ == '__main__':
 
-	test(detect(sys.argv[1]), 8080)
+	test("hotrod-frontend", 8080)

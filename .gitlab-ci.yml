@@ -69,12 +69,12 @@ unit:
   environment:
     name: StageEnv
   variables:
-    KUBERNETES_NAMESPACE_OVERWRITE: testspace
+    KUBERNETES_NAMESPACE_OVERWRITE: hotrod
   script:
     - apk add python py-pip
     - pip install requests
     - kubectl rollout status deployment/$CI_ENVIRONMENT_SLUG-hotrod-frontend --namespace $KUBE_NAMESPACE
-    - python tests/frontend_unit_test.py $KUBE_NAMESPACE
+    - python tests/frontend_unit_test.py
 
 production:
   stage: deploy
