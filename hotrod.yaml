@@ -5,13 +5,15 @@ metadata:
   name: hotrod-frontend
   labels:
     appName: hotrod-frontend
+  annotations:
+    kubernetes.io/ingress.class: nginx
 spec:
   # if your cluster supports it, uncomment the following to automatically create
   # an external load-balanced IP for the frontend service.
   ports:
   - name: hotrod-frontend
     port: 8080
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     appName: hotrod-frontend
 ---
