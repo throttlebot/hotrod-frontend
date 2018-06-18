@@ -54,6 +54,7 @@ stage:
     - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
     - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
 
+
 integration:
   stage: test
   environment:
