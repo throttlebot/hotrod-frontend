@@ -17,7 +17,7 @@ spec:
   ports:
   - name: hotrod-route
     port: 8083
-  type: ClusterIP
+  type: LoadBalancer
   selector:
     appName: hotrod-route
 
