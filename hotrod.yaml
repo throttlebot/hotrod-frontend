@@ -11,7 +11,6 @@ spec:
   ports:
   - name: hotrod-frontend
     port: 8080
-  type: ClusterIP
   selector:
     appName: hotrod-frontend
 ---
