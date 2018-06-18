@@ -16,7 +16,7 @@ spec:
     appName: hotrod-frontend
   ports:
   - name: hotrod-route
-    port: 8083
+    port: 8080
   type: LoadBalancer
   selector:
     appName: hotrod-route
