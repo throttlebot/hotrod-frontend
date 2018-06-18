@@ -14,8 +14,7 @@ spec:
   type: ClusterIP
   selector:
     appName: hotrod-frontend
-  
-  
+  ports:
   - name: hotrod-route
     port: 8083
   type: ClusterIP
