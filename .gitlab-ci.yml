@@ -52,8 +52,8 @@ stage:
     - sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
     - sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
     - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
+    - sleep 20s
     - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
-
 
 integration:
   stage: test
@@ -63,6 +63,7 @@ integration:
     - apk add python py-pip
     - pip install requests
     - kubectl rollout status deployment/$CI_ENVIRONMENT_SLUG-hotrod-frontend --namespace $KUBE_NAMESPACE
+    - sleep 20s
     - python tests/external_integration_test.py $KUBE_NAMESPACE
 
 unit:
