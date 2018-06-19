@@ -24,7 +24,7 @@ before_script:
   - chmod +x ./kubectl && mv ./kubectl /usr/local/bin/kubectl
   - mkdir -p $HOME/.kube
   - cat $KUBECONFIG > $HOME/.kube/config
-  - curl https://github.com/istio/istio/releases/download/0.8.0/istio-0.8.0-osx.tar.gz | tar xz
+  - curl -L https://github.com/istio/istio/releases/download/0.8.0/istio-0.8.0-linux.tar.gz | tar xz
 
 build:
   stage: build
@@ -56,6 +56,7 @@ stage:
     - sleep 20s
     - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
     - kubectl apply -f ingress/frontend-ingress.yaml --namespace $KUBE_NAMESPACE
+    - kubectl apply -f <(./istio-*/bin/istioctl kube-inject -f hotrod.yaml) --namespace $KUBE_NAMESPACE
 
 integration:
   stage: test
@@ -80,14 +81,14 @@ unit:
     - kubectl rollout status deployment/$CI_ENVIRONMENT_SLUG-hotrod-frontend --namespace $KUBE_NAMESPACE
     - python tests/frontend_unit_test.py
 
-production:
-  stage: deploy
-  environment:
-      name: ProdEnv
-  script:
-    - sed -i -e s/COMMITID/$CI_COMMIT_SHA/g hotrod.yaml
-    - sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
-    - sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
-    - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
-    - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
-    - kubectl apply -f ingress/frontend-ingress.yaml --namespace $KUBE_NAMESPACE
+#production:
+  #stage: deploy
+  #environment:
+      #name: ProdEnv
+  #script:
+    #- sed -i -e s/COMMITID/$CI_COMMIT_SHA/g hotrod.yaml
+    #- sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
+    #- sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
+    #- sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
+    #- kubectl apply -f <(./istio-*/bin/istioctl kube-inject -f hotrod.yaml) --namespace $KUBE_NAMESPACE
+    #- kubectl apply -f ingress/frontend-ingress.yaml --namespace $KUBE_NAMESPACE
