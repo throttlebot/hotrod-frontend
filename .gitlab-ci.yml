@@ -24,6 +24,7 @@ before_script:
   - chmod +x ./kubectl && mv ./kubectl /usr/local/bin/kubectl
   - mkdir -p $HOME/.kube
   - cat $KUBECONFIG > $HOME/.kube/config
+  - curl https://github.com/istio/istio/releases/download/0.8.0/istio-0.8.0-osx.tar.gz | tar xz
 
 build:
   stage: build
@@ -55,7 +56,6 @@ stage:
     - sleep 20s
     - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
     - kubectl apply -f ingress/frontend-ingress.yaml --namespace $KUBE_NAMESPACE
-
 
 integration:
   stage: test
