@@ -82,15 +82,15 @@ unit:
     - sleep 20s
     - python tests/frontend_unit_test.py
 
-#production:
-  #stage: deploy
-  #environment:
-      #name: ProdEnv
-  #script:
-    #- sed -i -e s/COMMITID/$CI_COMMIT_SHA/g hotrod.yaml
-    #- sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
-    #- sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
-    #- sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
-    #- ./istio-*/bin/istioctl kube-inject -f hotrod.yaml -o hotrod-with-istio.yaml
-    #- kubectl apply -f hotrod-with-istio.yaml --namespace $KUBE_NAMESPACE
-    #- kubectl apply -f ingress/frontend-ingress.yaml --namespace $KUBE_NAMESPACE
+production:
+  stage: deploy
+  environment:
+      name: ProdEnv
+  script:
+    - sed -i -e s/COMMITID/$CI_COMMIT_SHA/g hotrod.yaml
+    - sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
+    - sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
+    - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
+    - ./istio-*/bin/istioctl kube-inject -f hotrod.yaml -o hotrod-with-istio.yaml
+    - kubectl apply -f hotrod-with-istio.yaml --namespace $KUBE_NAMESPACE
+    - kubectl apply -f ingress/frontend-ingress.yaml --namespace $KUBE_NAMESPACE
