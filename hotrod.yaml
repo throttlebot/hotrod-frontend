@@ -9,7 +9,7 @@ spec:
   # if your cluster supports it, uncomment the following to automatically create
   # an external load-balanced IP for the frontend service.
   ports:
-  - name: hotrod-frontend
+  - name: http-hotrod-frontend
     port: 8080
   type: ClusterIP
   selector:
