@@ -54,6 +54,8 @@ stage:
     - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
     - sleep 20s
     - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
+    - kubectl apply -f ingress/frontend-ingress.yaml --namespace $KUBE_NAMESPACE
+
 
 integration:
   stage: test
@@ -88,3 +90,4 @@ production:
     - sed -i -e s/APPLICATION_TRACK/stable/g hotrod.yaml
     - sed -i -e s/REPLICA_COUNT/3/g hotrod.yaml
     - kubectl apply -f hotrod.yaml --namespace $KUBE_NAMESPACE
+    - kubectl apply -f ingress/frontend-ingress.yaml --namespace $KUBE_NAMESPACE
