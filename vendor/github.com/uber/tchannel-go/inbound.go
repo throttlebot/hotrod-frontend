@@ -43,17 +43,13 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	case connectionStartClose, connectionInboundClosed, connectionClosed:
 		c.SendSystemError(frame.Header.ID, callReqSpan(frame), ErrChannelClosed)
 		return true
-	case connectionWaitingToRecvInitReq, connectionWaitingToSendInitReq, connectionWaitingToRecvInitRes:
-		err := NewSystemError(ErrCodeDeclined, "connection not ready")
-		c.SendSystemError(frame.Header.ID, callReqSpan(frame), err)
-		return true
 	default:
 		panic(fmt.Errorf("unknown connection state for call req: %v", state))
 	}
 
 	callReq := new(callReq)
 	callReq.id = frame.Header.ID
-	initialFragment, err := parseInboundFragment(c.framePool, frame, callReq)
+	initialFragment, err := parseInboundFragment(c.opts.FramePool, frame, callReq)
 	if err != nil {
 		// TODO(mmihic): Probably want to treat this as a protocol error
 		c.log.WithFields(
@@ -73,7 +69,7 @@ func (c *Connection) handleCallReq(frame *Frame) bool {
 	}
 	defer c.pendingExchangeMethodDone()
 
-	mex, err := c.inbound.newExchange(ctx, c.framePool, callReq.messageType(), frame.Header.ID, mexChannelBufferSize)
+	mex, err := c.inbound.newExchange(ctx, c.opts.FramePool, callReq.messageType(), frame.Header.ID, mexChannelBufferSize)
 	if err != nil {
 		if err == errDuplicateMex {
 			err = errInboundRequestAlreadyActive
@@ -168,7 +164,7 @@ func (c *Connection) dispatchInbound(_ uint32, _ uint32, call *InboundCall, fram
 			LogField{"remotePeer", c.remotePeerInfo},
 			ErrField(err),
 		).Error("Couldn't read method.")
-		c.framePool.Release(frame)
+		c.opts.FramePool.Release(frame)
 		return
 	}
 
@@ -182,13 +178,22 @@ func (c *Connection) dispatchInbound(_ uint32, _ uint32, call *InboundCall, fram
 	go func() {
 		select {
 		case <-call.mex.ctx.Done():
-			if call.mex.ctx.Err() == context.DeadlineExceeded {
-				call.mex.inboundTimeout()
+			// checking if message exchange timedout or was cancelled
+			// only two possible errors at this step:
+			// context.DeadlineExceeded
+			// context.Canceled
+			if call.mex.ctx.Err() != nil {
+				call.mex.inboundExpired()
 			}
 		case <-call.mex.errCh.c:
 			if c.log.Enabled(LogLevelDebug) {
 				call.log.Debugf("Wait for timeout/cancellation interrupted by error: %v", call.mex.errCh.err)
 			}
+			// when an exchange errors out, mark the exchange as expired
+			// and call cancel so the server handler's context is canceled
+			// TODO: move the cancel to the parent context at connnection level
+			call.response.cancel()
+			call.mex.inboundExpired()
 		}
 	}()
 
@@ -239,12 +244,22 @@ func (call *InboundCall) ShardKey() string {
 	return call.headers[ShardKey]
 }
 
+// RoutingKey returns the routing key from the RoutingKey transport header.
+func (call *InboundCall) RoutingKey() string {
+	return call.headers[RoutingKey]
+}
+
 // RoutingDelegate returns the routing delegate from the RoutingDelegate transport header.
 func (call *InboundCall) RoutingDelegate() string {
 	return call.headers[RoutingDelegate]
 }
 
-// RemotePeer returns the caller's peer info.
+// LocalPeer returns the local peer information for this call.
+func (call *InboundCall) LocalPeer() LocalPeerInfo {
+	return call.conn.localPeerInfo
+}
+
+// RemotePeer returns the remote peer information for this call.
 func (call *InboundCall) RemotePeer() PeerInfo {
 	return call.conn.RemotePeerInfo()
 }
@@ -256,6 +271,7 @@ func (call *InboundCall) CallOptions() *CallOptions {
 		Format:          call.Format(),
 		ShardKey:        call.ShardKey(),
 		RoutingDelegate: call.RoutingDelegate(),
+		RoutingKey:      call.RoutingKey(),
 	}
 }
 
@@ -343,6 +359,13 @@ func (response *InboundCallResponse) SetApplicationError() error {
 	}
 	response.applicationError = true
 	return nil
+}
+
+// Blackhole indicates no response will be sent, and cleans up any resources
+// associated with this request. This allows for services to trigger a timeout in
+// clients without holding on to any goroutines on the server.
+func (response *InboundCallResponse) Blackhole() {
+	response.cancel()
 }
 
 // Arg2Writer returns a WriteCloser that can be used to write the second argument.

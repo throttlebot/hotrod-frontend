@@ -34,6 +34,10 @@ type ContextWithHeaders interface {
 
 	// SetResponseHeaders sets the given response headers on the context.
 	SetResponseHeaders(map[string]string)
+
+	// Child creates a child context which stores headers separately from
+	// the parent context.
+	Child() ContextWithHeaders
 }
 
 type headerCtx struct {
@@ -78,6 +82,28 @@ func (c headerCtx) SetResponseHeaders(headers map[string]string) {
 	panic("SetResponseHeaders called on ContextWithHeaders not created via WrapWithHeaders")
 }
 
+// Child creates a child context with a separate container for headers.
+func (c headerCtx) Child() ContextWithHeaders {
+	var headersCopy headersContainer
+	if h := c.headers(); h != nil {
+		headersCopy = *h
+	}
+
+	return Wrap(context.WithValue(c.Context, contextKeyHeaders, &headersCopy))
+}
+
+// Wrap wraps an existing context.Context into a ContextWithHeaders.
+// If the underlying context has headers, they are preserved.
+func Wrap(ctx context.Context) ContextWithHeaders {
+	hctx := headerCtx{Context: ctx}
+	if h := hctx.headers(); h != nil {
+		return hctx
+	}
+
+	// If there is no header container, we should create an empty one.
+	return WrapWithHeaders(ctx, nil)
+}
+
 // WrapWithHeaders returns a Context that can be used to make a call with request headers.
 // If the parent `ctx` is already an instance of ContextWithHeaders, its existing headers
 // will be ignored. In order to merge new headers with parent headers, use ContextBuilder.
@@ -87,4 +113,9 @@ func WrapWithHeaders(ctx context.Context, headers map[string]string) ContextWith
 	}
 	newCtx := context.WithValue(ctx, contextKeyHeaders, h)
 	return headerCtx{Context: newCtx}
+}
+
+// WithoutHeaders hides any TChannel headers from the given context.
+func WithoutHeaders(ctx context.Context) context.Context {
+	return context.WithValue(context.WithValue(ctx, contextKeyTChannel, nil), contextKeyHeaders, nil)
 }

@@ -26,6 +26,7 @@ import (
 	"sync"
 
 	tchannel "github.com/uber/tchannel-go"
+	"github.com/uber/tchannel-go/internal/argreader"
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"golang.org/x/net/context"
@@ -93,13 +94,27 @@ func (s *Server) SetContextFn(f func(ctx context.Context, method string, headers
 	s.ctxFn = f
 }
 
-func (s *Server) onError(err error) {
+func (s *Server) onError(call *tchannel.InboundCall, err error) {
 	// TODO(prashant): Expose incoming call errors through options for NewServer.
-	// Timeouts should not be reported as errors.
+	remotePeer := call.RemotePeer()
+	logger := s.log.WithFields(
+		tchannel.ErrField(err),
+		tchannel.LogField{Key: "method", Value: call.MethodString()},
+		tchannel.LogField{Key: "callerName", Value: call.CallerName()},
+
+		// TODO: These are very similar to the connection fields, but we don't
+		// have access to the connection's logger. Consider exposing the
+		// connection through CurrentCall.
+		tchannel.LogField{Key: "localAddr", Value: call.LocalPeer().HostPort},
+		tchannel.LogField{Key: "remoteHostPort", Value: remotePeer.HostPort},
+		tchannel.LogField{Key: "remoteIsEphemeral", Value: remotePeer.IsEphemeral},
+		tchannel.LogField{Key: "remoteProcess", Value: remotePeer.ProcessName},
+	)
+
 	if tchannel.GetSystemErrorCode(err) == tchannel.ErrCodeTimeout {
-		s.log.Debugf("thrift Server timeout: %v", err)
+		logger.Debug("Thrift server timeout.")
 	} else {
-		s.log.WithFields(tchannel.ErrField(err)).Error("Thrift server error.")
+		logger.Error("Thrift server error.")
 	}
 }
 
@@ -116,6 +131,11 @@ func (s *Server) handle(origCtx context.Context, handler handler, method string,
 	if err != nil {
 		return err
 	}
+
+	if err := argreader.EnsureEmpty(reader, "reading request headers"); err != nil {
+		return err
+	}
+
 	if err := reader.Close(); err != nil {
 		return err
 	}
@@ -133,6 +153,10 @@ func (s *Server) handle(origCtx context.Context, handler handler, method string,
 	success, resp, err := handler.server.Handle(ctx, method, wp.protocol)
 	thriftProtocolPool.Put(wp)
 
+	if handler.postResponseCB != nil {
+		defer handler.postResponseCB(ctx, method, resp)
+	}
+
 	if err != nil {
 		if _, ok := err.(thrift.TProtocolException); ok {
 			// We failed to parse the Thrift generated code, so convert the error to bad request.
@@ -142,6 +166,10 @@ func (s *Server) handle(origCtx context.Context, handler handler, method string,
 		reader.Close()
 		call.Response().SendSystemError(err)
 		return nil
+	}
+
+	if err := argreader.EnsureEmpty(reader, "reading request body"); err != nil {
+		return err
 	}
 	if err := reader.Close(); err != nil {
 		return err
@@ -168,10 +196,6 @@ func (s *Server) handle(origCtx context.Context, handler handler, method string,
 	resp.Write(wp.protocol)
 	thriftProtocolPool.Put(wp)
 	err = writer.Close()
-
-	if handler.postResponseCB != nil {
-		handler.postResponseCB(ctx, method, resp)
-	}
 
 	return err
 }
@@ -201,6 +225,6 @@ func (s *Server) Handle(ctx context.Context, call *tchannel.InboundCall) {
 	}
 
 	if err := s.handle(ctx, handler, method, call); err != nil {
-		s.onError(err)
+		s.onError(call, err)
 	}
 }

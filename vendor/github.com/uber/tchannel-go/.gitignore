@@ -16,3 +16,5 @@ lint.log
 .idea
 tchannel-go.iml
 .vscode
+.bin/
+.idea/

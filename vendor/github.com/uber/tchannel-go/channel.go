@@ -26,28 +26,29 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/uber/tchannel-go/relay"
 	"github.com/uber/tchannel-go/tnet"
 
 	"github.com/opentracing/opentracing-go"
+	"github.com/uber-go/atomic"
 	"golang.org/x/net/context"
 )
 
 var (
 	errAlreadyListening  = errors.New("channel already listening")
 	errInvalidStateForOp = errors.New("channel is in an invalid state for that method")
+	errMaxIdleTimeNotSet = errors.New("IdleCheckInterval is set but MaxIdleTime is zero")
 
 	// ErrNoServiceName is returned when no service name is provided when
 	// creating a new channel.
 	ErrNoServiceName = errors.New("no service name provided")
 )
 
-const (
-	ephemeralHostPort = "0.0.0.0:0"
-)
+const ephemeralHostPort = "0.0.0.0:0"
 
 // ChannelOptions are used to control parameters on a create a TChannel
 type ChannelOptions struct {
@@ -57,20 +58,31 @@ type ChannelOptions struct {
 	// The name of the process, for logging and reporting to peers
 	ProcessName string
 
+	// OnPeerStatusChanged is an optional callback that receives a notification
+	// whenever the channel establishes a usable connection to a peer, or loses
+	// a connection to a peer.
+	OnPeerStatusChanged func(*Peer)
+
 	// The logger to use for this channel
 	Logger Logger
 
 	// The host:port selection implementation to use for relaying. This is an
 	// unstable API - breaking changes are likely.
-	RelayHosts relay.Hosts
-
-	// The stats implementation to use for relaying. This is an unstable API -
-	// breaking changes are likely.
-	RelayStats relay.Stats
+	RelayHost RelayHost
 
 	// The list of service names that should be handled locally by this channel.
 	// This is an unstable API - breaking changes are likely.
 	RelayLocalHandlers []string
+
+	// The maximum allowable timeout for relayed calls (longer timeouts are
+	// clamped to this value). Passing zero uses the default of 2m.
+	// This is an unstable API - breaking changes are likely.
+	RelayMaxTimeout time.Duration
+
+	// RelayTimerVerification will disable pooling of relay timers, and instead
+	// verify that timers are not used once they are released.
+	// This is an unstable API - breaking changes are likely.
+	RelayTimerVerification bool
 
 	// The reporter to use for reporting stats for this channel.
 	StatsReporter StatsReporter
@@ -79,9 +91,28 @@ type ChannelOptions struct {
 	// Note: This is not a stable part of the API and may change.
 	TimeNow func() time.Time
 
+	// TimeTicker is a variable for overriding time.Ticker in unit tests.
+	// Note: This is not a stable part of the API and may change.
+	TimeTicker func(d time.Duration) *time.Ticker
+
+	// MaxIdleTime controls how long we allow an idle connection to exist
+	// before tearing it down. Must be set to non-zero if IdleCheckInterval
+	// is set.
+	MaxIdleTime time.Duration
+
+	// IdleCheckInterval controls how often the channel runs a sweep over
+	// all active connections to see if they can be dropped. Connections that
+	// are idle for longer than MaxIdleTime are disconnected. If this is set to
+	// zero (the default), idle checking is disabled.
+	IdleCheckInterval time.Duration
+
 	// Tracer is an OpenTracing Tracer used to manage distributed tracing spans.
 	// If not set, opentracing.GlobalTracer() is used.
 	Tracer opentracing.Tracer
+
+	// Handler is an alternate handler for all inbound requests, overriding the
+	// default handler that delegates to a subchannel.
+	Handler Handler
 }
 
 // ChannelState is the state of a channel.
@@ -116,11 +147,16 @@ const (
 type Channel struct {
 	channelConnectionCommon
 
-	createdStack      string
-	commonStatsTags   map[string]string
-	connectionOptions ConnectionOptions
-	peers             *PeerList
-	relayHosts        relay.Hosts
+	chID                uint32
+	createdStack        string
+	commonStatsTags     map[string]string
+	connectionOptions   ConnectionOptions
+	peers               *PeerList
+	relayHost           RelayHost
+	relayMaxTimeout     time.Duration
+	relayTimerVerify    bool
+	handler             Handler
+	onPeerStatusChanged func(*Peer)
 
 	// mutable contains all the members of Channel which are mutable.
 	mutable struct {
@@ -128,6 +164,7 @@ type Channel struct {
 		state        ChannelState
 		peerInfo     LocalPeerInfo // May be ephemeral if this is a client only channel
 		l            net.Listener  // May be nil if this is a client only channel
+		idleSweep    *idleSweep
 		conns        map[uint32]*Connection
 	}
 }
@@ -136,13 +173,16 @@ type Channel struct {
 // and can be copied directly from the channel to the connection.
 type channelConnectionCommon struct {
 	log           Logger
-	relayStats    relay.Stats
 	relayLocal    map[string]struct{}
 	statsReporter StatsReporter
 	tracer        opentracing.Tracer
 	subChannels   *subChannelMap
 	timeNow       func() time.Time
+	timeTicker    func(time.Duration) *time.Ticker
 }
+
+// _nextChID is used to allocate unique IDs to every channel for debugging purposes.
+var _nextChID atomic.Uint32
 
 // Tracer returns the OpenTracing Tracer for this channel. If no tracer was provided
 // in the configuration, returns opentracing.GlobalTracer(). Note that this approach
@@ -166,14 +206,14 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		opts = &ChannelOptions{}
 	}
 
-	logger := opts.Logger
-	if logger == nil {
-		logger = NullLogger
-	}
-
 	processName := opts.ProcessName
 	if processName == "" {
 		processName = fmt.Sprintf("%s[%d]", filepath.Base(os.Args[0]), os.Getpid())
+	}
+
+	logger := opts.Logger
+	if logger == nil {
+		logger = NullLogger
 	}
 
 	statsReporter := opts.StatsReporter
@@ -186,33 +226,56 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 		timeNow = time.Now
 	}
 
-	relayStats := relay.NewNoopStats()
-	if opts.RelayStats != nil {
-		relayStats = opts.RelayStats
+	timeTicker := opts.TimeTicker
+	if timeTicker == nil {
+		timeTicker = time.NewTicker
+	}
+
+	chID := _nextChID.Inc()
+	logger = logger.WithFields(
+		LogField{"serviceName", serviceName},
+		LogField{"process", processName},
+		LogField{"chID", chID},
+	)
+
+	if err := opts.validateIdleCheck(); err != nil {
+		return nil, err
 	}
 
 	ch := &Channel{
 		channelConnectionCommon: channelConnectionCommon{
-			log: logger.WithFields(
-				LogField{"service", serviceName},
-				LogField{"process", processName}),
-			relayStats:    relayStats,
+			log:           logger,
 			relayLocal:    toStringSet(opts.RelayLocalHandlers),
 			statsReporter: statsReporter,
 			subChannels:   &subChannelMap{},
 			timeNow:       timeNow,
+			timeTicker:    timeTicker,
 			tracer:        opts.Tracer,
 		},
-
-		connectionOptions: opts.DefaultConnectionOptions,
-		relayHosts:        opts.RelayHosts,
+		chID:              chID,
+		connectionOptions: opts.DefaultConnectionOptions.withDefaults(),
+		relayHost:         opts.RelayHost,
+		relayMaxTimeout:   validateRelayMaxTimeout(opts.RelayMaxTimeout, logger),
+		relayTimerVerify:  opts.RelayTimerVerification,
 	}
-	ch.peers = newRootPeerList(ch).newChild()
+	ch.peers = newRootPeerList(ch, opts.OnPeerStatusChanged).newChild()
+
+	if opts.Handler != nil {
+		ch.handler = opts.Handler
+	} else {
+		ch.handler = channelHandler{ch}
+	}
 
 	ch.mutable.peerInfo = LocalPeerInfo{
 		PeerInfo: PeerInfo{
 			ProcessName: processName,
 			HostPort:    ephemeralHostPort,
+			IsEphemeral: true,
+			Version: PeerVersion{
+				Language:        "go",
+				LanguageVersion: strings.TrimPrefix(runtime.Version(), "go"),
+				TChannelVersion: VersionInfo,
+			},
 		},
 		ServiceName: serviceName,
 	}
@@ -220,9 +283,21 @@ func NewChannel(serviceName string, opts *ChannelOptions) (*Channel, error) {
 	ch.mutable.conns = make(map[uint32]*Connection)
 	ch.createCommonStats()
 
-	ch.registerInternal()
+	// Register internal unless the root handler has been overridden, since
+	// Register will panic.
+	if opts.Handler == nil {
+		ch.registerInternal()
+	}
 
 	registerNewChannel(ch)
+
+	if opts.RelayHost != nil {
+		opts.RelayHost.SetChannel(ch)
+	}
+
+	// Start the idle connection timer.
+	ch.mutable.idleSweep = startIdleSweep(ch, opts)
+
 	return ch, nil
 }
 
@@ -250,10 +325,9 @@ func (ch *Channel) Serve(l net.Listener) error {
 	mutable.state = ChannelListening
 
 	mutable.peerInfo.HostPort = l.Addr().String()
+	mutable.peerInfo.IsEphemeral = false
 	ch.log = ch.log.WithFields(LogField{"hostPort", mutable.peerInfo.HostPort})
-
-	peerInfo := mutable.peerInfo
-	ch.log.Debugf("%v (%v) listening on %v", peerInfo.ProcessName, peerInfo.ServiceName, peerInfo.HostPort)
+	ch.log.Info("Channel is listening.")
 	go ch.serve()
 	return nil
 }
@@ -310,7 +384,13 @@ type Registrar interface {
 // under that. You may also use SetHandler on a SubChannel to set up a
 // catch-all Handler for that service. See the docs for SetHandler for more
 // information.
+//
+// Register panics if the channel was constructed with an alternate root
+// handler.
 func (ch *Channel) Register(h Handler, methodName string) {
+	if _, ok := ch.handler.(channelHandler); !ok {
+		panic("can't register handler when channel configured with alternate root handler")
+	}
 	ch.GetSubChannel(ch.PeerInfo().ServiceName).Register(h, methodName)
 }
 
@@ -330,7 +410,7 @@ func (ch *Channel) createCommonStats() {
 	}
 	host, err := os.Hostname()
 	if err != nil {
-		ch.log.Infof("channel failed to get host: %v", err)
+		ch.log.WithFields(ErrField(err)).Info("Channel creation failed to get host.")
 		return
 	}
 	ch.commonStatsTags["host"] = host
@@ -340,9 +420,11 @@ func (ch *Channel) createCommonStats() {
 // GetSubChannel returns a SubChannel for the given service name. If the subchannel does not
 // exist, it is created.
 func (ch *Channel) GetSubChannel(serviceName string, opts ...SubChannelOption) *SubChannel {
-	sub := ch.subChannels.getOrAdd(serviceName, ch)
-	for _, opt := range opts {
-		opt(sub)
+	sub, added := ch.subChannels.getOrAdd(serviceName, ch)
+	if added {
+		for _, opt := range opts {
+			opt(sub)
+		}
 	}
 	return sub
 }
@@ -352,18 +434,18 @@ func (ch *Channel) Peers() *PeerList {
 	return ch.peers
 }
 
-// rootPeers returns the root PeerList for the channel, which is the sole place
+// RootPeers returns the root PeerList for the channel, which is the sole place
 // new Peers are created. All children of the root list (including ch.Peers())
 // automatically re-use peers from the root list and create new peers in the
 // root list.
-func (ch *Channel) rootPeers() *RootPeerList {
+func (ch *Channel) RootPeers() *RootPeerList {
 	return ch.peers.parent
 }
 
 // BeginCall starts a new call to a remote peer, returning an OutboundCall that can
 // be used to write the arguments of the call.
 func (ch *Channel) BeginCall(ctx context.Context, hostPort, serviceName, methodName string, callOptions *CallOptions) (*OutboundCall, error) {
-	p := ch.rootPeers().GetOrAdd(hostPort)
+	p := ch.RootPeers().GetOrAdd(hostPort)
 	return p.BeginCall(ctx, serviceName, methodName, callOptions)
 }
 
@@ -403,24 +485,24 @@ func (ch *Channel) serve() {
 
 		acceptBackoff = 0
 
-		// Register the connection in the peer once the channel is set up.
-		events := connectionEvents{
-			OnActive:           ch.inboundConnectionActive,
-			OnCloseStateChange: ch.connectionCloseStateChange,
-			OnExchangeUpdated:  ch.exchangeUpdated,
-		}
-		if _, err := ch.newInboundConnection(netConn, events); err != nil {
-			// Server is getting overloaded - begin rejecting new connections
-			ch.log.WithFields(ErrField(err)).Error("Couldn't create new TChannelConnection for incoming conn.")
-			netConn.Close()
-			continue
-		}
+		// Perform the connection handshake in a background goroutine.
+		go func() {
+			// Register the connection in the peer once the channel is set up.
+			events := connectionEvents{
+				OnActive:           ch.inboundConnectionActive,
+				OnCloseStateChange: ch.connectionCloseStateChange,
+				OnExchangeUpdated:  ch.exchangeUpdated,
+			}
+			if _, err := ch.inboundHandshake(context.Background(), netConn, events); err != nil {
+				netConn.Close()
+			}
+		}()
 	}
 }
 
 // Ping sends a ping message to the given hostPort and waits for a response.
 func (ch *Channel) Ping(ctx context.Context, hostPort string) error {
-	peer := ch.rootPeers().GetOrAdd(hostPort)
+	peer := ch.RootPeers().GetOrAdd(hostPort)
 	conn, err := peer.GetConnection(ctx)
 	if err != nil {
 		return err
@@ -454,15 +536,6 @@ func (ch *Channel) ServiceName() string {
 	return ch.PeerInfo().ServiceName
 }
 
-func getTimeout(ctx context.Context) time.Duration {
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		return DefaultConnectTimeout
-	}
-
-	return deadline.Sub(time.Now())
-}
-
 // Connect creates a new outbound connection to hostPort.
 func (ch *Channel) Connect(ctx context.Context, hostPort string) (*Connection, error) {
 	switch state := ch.State(); state {
@@ -487,28 +560,49 @@ func (ch *Channel) Connect(ctx context.Context, hostPort string) (*Connection, e
 		OnExchangeUpdated:  ch.exchangeUpdated,
 	}
 
-	c, err := ch.newOutboundConnection(getTimeout(ctx), hostPort, events)
+	if err := ctx.Err(); err != nil {
+		return nil, GetContextError(err)
+	}
+
+	timeout := getTimeout(ctx)
+	tcpConn, err := dialContext(ctx, hostPort)
 	if err != nil {
+		if ne, ok := err.(net.Error); ok && ne.Timeout() {
+			ch.log.WithFields(
+				LogField{"remoteHostPort", hostPort},
+				LogField{"timeout", timeout},
+			).Info("Outbound net.Dial timed out.")
+			err = ErrTimeout
+		} else if ctx.Err() == context.Canceled {
+			ch.log.WithFields(
+				LogField{"remoteHostPort", hostPort},
+			).Info("Outbound net.Dial was cancelled.")
+			err = GetContextError(ErrRequestCancelled)
+		} else {
+			ch.log.WithFields(
+				ErrField(err),
+				LogField{"remoteHostPort", hostPort},
+			).Info("Outbound net.Dial failed.")
+		}
 		return nil, err
 	}
 
-	if err := c.sendInit(ctx); err != nil {
-		return nil, err
+	conn, err := ch.outboundHandshake(ctx, tcpConn, hostPort, events)
+	if conn != nil {
+		// It's possible that the connection we just created responds with a host:port
+		// that is not what we tried to connect to. E.g., we may have connected to
+		// 127.0.0.1:1234, but the returned host:port may be 10.0.0.1:1234.
+		// In this case, the connection won't be added to 127.0.0.1:1234 peer
+		// and so future calls to that peer may end up creating new connections. To
+		// avoid this issue, and to avoid clients being aware of any TCP relays, we
+		// add the connection to the intended peer.
+		if hostPort != conn.remotePeerInfo.HostPort {
+			conn.log.Debugf("Outbound connection host:port mismatch, adding to peer %v", conn.remotePeerInfo.HostPort)
+			ch.addConnectionToPeer(hostPort, conn, outbound)
+		}
 	}
 
-	// It's possible that the connection we just created responds with a host:port
-	// that is not what we tried to connect to. E.g., we may have connected to
-	// 127.0.0.1:1234, but the returned host:port may be 10.0.0.1:1234.
-	// In this case, the connection won't be added to 127.0.0.1:1234 peer
-	// and so future calls to that peer may end up creating new connections. To
-	// avoid this issue, and to avoid clients being aware of any TCP relays, we
-	// add the connection to the intended peer.
-	if hostPort != c.remotePeerInfo.HostPort {
-		c.log.Debugf("Outbound connection host:port mismatch, adding to peer %v", c.remotePeerInfo.HostPort)
-		ch.addConnectionToPeer(hostPort, c, outbound)
-	}
-
-	return c, nil
+	return conn, err
 }
 
 // exchangeUpdated updates the peer heap.
@@ -517,13 +611,18 @@ func (ch *Channel) exchangeUpdated(c *Connection) {
 		// Hostport is unknown until we get init resp.
 		return
 	}
-	p := ch.rootPeers().GetOrAdd(c.remotePeerInfo.HostPort)
+
+	p, ok := ch.RootPeers().Get(c.remotePeerInfo.HostPort)
+	if !ok {
+		return
+	}
+
 	ch.updatePeer(p)
 }
 
 // updatePeer updates the score of the peer and update it's position in heap as well.
 func (ch *Channel) updatePeer(p *Peer) {
-	ch.peers.updatePeer(p)
+	ch.peers.onPeerChange(p)
 	ch.subChannels.updatePeer(p)
 	p.callOnUpdateComplete()
 }
@@ -555,8 +654,7 @@ func (ch *Channel) connectionActive(c *Connection, direction connectionDirection
 
 	if added := ch.addConnection(c, direction); !added {
 		// The channel isn't in a valid state to accept this connection, close the connection.
-		c.log.Debugf("Closing connection due to closing channel state")
-		c.Close()
+		c.close(LogField{"reason", "new active connection on closing channel"})
 		return
 	}
 
@@ -564,13 +662,13 @@ func (ch *Channel) connectionActive(c *Connection, direction connectionDirection
 }
 
 func (ch *Channel) addConnectionToPeer(hostPort string, c *Connection, direction connectionDirection) {
-	p := ch.rootPeers().GetOrAdd(hostPort)
+	p := ch.RootPeers().GetOrAdd(hostPort)
 	if err := p.addConnection(c, direction); err != nil {
 		c.log.WithFields(
 			LogField{"remoteHostPort", c.remotePeerInfo.HostPort},
 			LogField{"direction", direction},
 			ErrField(err),
-		).Warn("Failed to add connection to peer")
+		).Warn("Failed to add connection to peer.")
 	}
 
 	ch.updatePeer(p)
@@ -585,6 +683,7 @@ func (ch *Channel) outboundConnectionActive(c *Connection) {
 }
 
 // removeClosedConn removes a connection if it's closed.
+// Until a connection is fully closed, the channel must keep track of it.
 func (ch *Channel) removeClosedConn(c *Connection) {
 	if c.readState() != connectionClosed {
 		return
@@ -608,13 +707,13 @@ func (ch *Channel) getMinConnectionState() connectionState {
 // connectionCloseStateChange is called when a connection's close state changes.
 func (ch *Channel) connectionCloseStateChange(c *Connection) {
 	ch.removeClosedConn(c)
-	if peer, ok := ch.rootPeers().Get(c.remotePeerInfo.HostPort); ok {
+	if peer, ok := ch.RootPeers().Get(c.remotePeerInfo.HostPort); ok {
 		peer.connectionCloseStateChange(c)
 		ch.updatePeer(peer)
 	}
 	if c.outboundHP != "" && c.outboundHP != c.remotePeerInfo.HostPort {
 		// Outbound connections may be in multiple peers.
-		if peer, ok := ch.rootPeers().Get(c.outboundHP); ok {
+		if peer, ok := ch.RootPeers().Get(c.outboundHP); ok {
 			peer.connectionCloseStateChange(c)
 			ch.updatePeer(peer)
 		}
@@ -636,12 +735,14 @@ func (ch *Channel) connectionCloseStateChange(c *Connection) {
 		updateTo = ChannelInboundClosed
 	}
 
+	var updatedToState ChannelState
 	if updateTo > 0 {
 		ch.mutable.Lock()
 		// Recheck the state as it's possible another goroutine changed the state
 		// from what we expected, and so we might make a stale change.
 		if ch.mutable.state == chState {
 			ch.mutable.state = updateTo
+			updatedToState = updateTo
 		}
 		ch.mutable.Unlock()
 		chState = updateTo
@@ -649,6 +750,15 @@ func (ch *Channel) connectionCloseStateChange(c *Connection) {
 
 	c.log.Debugf("ConnectionCloseStateChange channel state = %v connection minState = %v",
 		chState, minState)
+
+	if updatedToState == ChannelClosed {
+		ch.onClosed()
+	}
+}
+
+func (ch *Channel) onClosed() {
+	removeClosedChannel(ch)
+	ch.log.Infof("Channel closed.")
 }
 
 // Closed returns whether this channel has been closed with .Close()
@@ -668,19 +778,25 @@ func (ch *Channel) State() ChannelState {
 // Close starts a graceful Close for the channel. This does not happen immediately:
 // 1. This call closes the Listener and starts closing connections.
 // 2. When all incoming connections are drained, the connection blocks new outgoing calls.
-// 3. When all connections are drainged, the channel's state is updated to Closed.
+// 3. When all connections are drained, the channel's state is updated to Closed.
 func (ch *Channel) Close() {
-	ch.Logger().Infof("Channel.Close called")
+	ch.Logger().Info("Channel.Close called.")
 	var connections []*Connection
+	var channelClosed bool
+
 	ch.mutable.Lock()
 
 	if ch.mutable.l != nil {
 		ch.mutable.l.Close()
 	}
 
+	// Stop the idle connections timer.
+	ch.mutable.idleSweep.Stop()
+
 	ch.mutable.state = ChannelStartClose
 	if len(ch.mutable.conns) == 0 {
 		ch.mutable.state = ChannelClosed
+		channelClosed = true
 	}
 	for _, c := range ch.mutable.conns {
 		connections = append(connections, c)
@@ -688,14 +804,25 @@ func (ch *Channel) Close() {
 	ch.mutable.Unlock()
 
 	for _, c := range connections {
-		c.Close()
+		c.close(LogField{"reason", "channel closing"})
 	}
-	removeClosedChannel(ch)
+
+	if channelClosed {
+		ch.onClosed()
+	}
 }
 
-// RelayHosts returns the channel's relay hosts, if any.
-func (ch *Channel) RelayHosts() relay.Hosts {
-	return ch.relayHosts
+// RelayHost returns the channel's RelayHost, if any.
+func (ch *Channel) RelayHost() RelayHost {
+	return ch.relayHost
+}
+
+func (o *ChannelOptions) validateIdleCheck() error {
+	if o.IdleCheckInterval > 0 && o.MaxIdleTime <= 0 {
+		return errMaxIdleTimeNotSet
+	}
+
+	return nil
 }
 
 func toStringSet(ss []string) map[string]struct{} {

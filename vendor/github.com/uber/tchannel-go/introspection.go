@@ -25,6 +25,7 @@ import (
 	"runtime"
 	"sort"
 	"strconv"
+	"time"
 
 	"golang.org/x/net/context"
 )
@@ -40,7 +41,7 @@ type IntrospectionOptions struct {
 	// IncludeTombstones will include tombstones when introspecting relays.
 	IncludeTombstones bool `json:"includeTombstones"`
 
-	// IncludeOtherChannels will include basic information about other chanenls
+	// IncludeOtherChannels will include basic information about other channels
 	// created in the same process as this channel.
 	IncludeOtherChannels bool `json:"includeOtherChannels"`
 }
@@ -54,6 +55,9 @@ type RuntimeVersion struct {
 
 // RuntimeState is a snapshot of the runtime state for a channel.
 type RuntimeState struct {
+	ID           uint32 `json:"id"`
+	ChannelState string `json:"channelState"`
+
 	// CreatedStack is the stack for how this channel was created.
 	CreatedStack string `json:"createdStack"`
 
@@ -75,6 +79,10 @@ type RuntimeState struct {
 	// Connections is the list of connection IDs in the channel
 	Connections []uint32 ` json:"connections"`
 
+	// InactiveConnections is the connection state for connections that are not active,
+	// and hence are not reported as part of root peers.
+	InactiveConnections []ConnectionRuntimeState `json:"inactiveConnections"`
+
 	// OtherChannels is information about any other channels running in this process.
 	OtherChannels map[string][]ChannelInfo `json:"otherChannels,omitEmpty"`
 
@@ -90,6 +98,7 @@ type GoRuntimeStateOptions struct {
 
 // ChannelInfo is the state of other channels in the same process.
 type ChannelInfo struct {
+	ID           uint32        `json:"id"`
 	CreatedStack string        `json:"createdStack"`
 	LocalPeer    LocalPeerInfo `json:"localPeer"`
 }
@@ -140,10 +149,12 @@ type ConnectionRuntimeState struct {
 	LocalHostPort    string                  `json:"localHostPort"`
 	RemoteHostPort   string                  `json:"remoteHostPort"`
 	OutboundHostPort string                  `json:"outboundHostPort"`
-	IsEphemeral      bool                    `json:"isEphemeral"`
+	RemotePeer       PeerInfo                `json:"remotePeer"`
 	InboundExchange  ExchangeSetRuntimeState `json:"inboundExchange"`
 	OutboundExchange ExchangeSetRuntimeState `json:"outboundExchange"`
 	Relayer          RelayerRuntimeState     `json:"relayer"`
+	HealthChecks     []bool                  `json:"healthChecks,omitempty"`
+	LastActivity     int64                   `json:"lastActivity"`
 }
 
 // RelayerRuntimeState is the runtime state for a single relayer.
@@ -151,6 +162,7 @@ type RelayerRuntimeState struct {
 	Count         int               `json:"count"`
 	InboundItems  RelayItemSetState `json:"inboundItems"`
 	OutboundItems RelayItemSetState `json:"outboundItems"`
+	MaxTimeout    time.Duration     `json:"maxTimeout"`
 }
 
 // ExchangeSetRuntimeState is the runtime state for a message exchange set.
@@ -198,24 +210,33 @@ func (ch *Channel) IntrospectState(opts *IntrospectionOptions) *RuntimeState {
 	}
 
 	ch.mutable.RLock()
+	state := ch.mutable.state
 	numConns := len(ch.mutable.conns)
+	inactiveConns := make([]*Connection, 0, numConns)
 	connIDs := make([]uint32, 0, numConns)
-	for id := range ch.mutable.conns {
+	for id, conn := range ch.mutable.conns {
 		connIDs = append(connIDs, id)
+		if !conn.IsActive() {
+			inactiveConns = append(inactiveConns, conn)
+		}
 	}
 
 	ch.mutable.RUnlock()
 
+	ch.State()
 	return &RuntimeState{
-		CreatedStack:   ch.createdStack,
-		LocalPeer:      ch.PeerInfo(),
-		SubChannels:    ch.subChannels.IntrospectState(opts),
-		RootPeers:      ch.rootPeers().IntrospectState(opts),
-		Peers:          ch.Peers().IntrospectList(opts),
-		NumConnections: numConns,
-		Connections:    connIDs,
-		OtherChannels:  ch.IntrospectOthers(opts),
-		RuntimeVersion: introspectRuntimeVersion(),
+		ID:                  ch.chID,
+		ChannelState:        state.String(),
+		CreatedStack:        ch.createdStack,
+		LocalPeer:           ch.PeerInfo(),
+		SubChannels:         ch.subChannels.IntrospectState(opts),
+		RootPeers:           ch.RootPeers().IntrospectState(opts),
+		Peers:               ch.Peers().IntrospectList(opts),
+		NumConnections:      numConns,
+		Connections:         connIDs,
+		InactiveConnections: getConnectionRuntimeState(inactiveConns, opts),
+		OtherChannels:       ch.IntrospectOthers(opts),
+		RuntimeVersion:      introspectRuntimeVersion(),
 	}
 }
 
@@ -246,6 +267,7 @@ func (ch *Channel) IntrospectOthers(opts *IntrospectionOptions) map[string][]Cha
 // ReportInfo returns ChannelInfo for a channel.
 func (ch *Channel) ReportInfo(opts *IntrospectionOptions) ChannelInfo {
 	return ChannelInfo{
+		ID:           ch.chID,
 		CreatedStack: ch.createdStack,
 		LocalPeer:    ch.PeerInfo(),
 	}
@@ -329,15 +351,18 @@ func (c *Connection) IntrospectState(opts *IntrospectionOptions) ConnectionRunti
 	c.stateMut.RLock()
 	defer c.stateMut.RUnlock()
 
+	// TODO(prashantv): Add total number of health checks, and health check options.
 	state := ConnectionRuntimeState{
 		ID:               c.connID,
 		ConnectionState:  c.state.String(),
 		LocalHostPort:    c.conn.LocalAddr().String(),
 		RemoteHostPort:   c.conn.RemoteAddr().String(),
 		OutboundHostPort: c.outboundHP,
-		IsEphemeral:      c.remotePeerInfo.IsEphemeral,
+		RemotePeer:       c.remotePeerInfo,
 		InboundExchange:  c.inbound.IntrospectState(opts),
 		OutboundExchange: c.outbound.IntrospectState(opts),
+		HealthChecks:     c.healthCheckHistory.asBools(),
+		LastActivity:     c.lastActivity.Load(),
 	}
 	if c.relay != nil {
 		state.Relayer = c.relay.IntrospectState(opts)
@@ -352,6 +377,7 @@ func (r *Relayer) IntrospectState(opts *IntrospectionOptions) RelayerRuntimeStat
 		Count:         count,
 		InboundItems:  r.inbound.IntrospectState(opts, "inbound"),
 		OutboundItems: r.outbound.IntrospectState(opts, "outbound"),
+		MaxTimeout:    r.maxTimeout,
 	}
 }
 

@@ -34,18 +34,18 @@ var (
 	errChunkExceedsFragmentSize = errors.New("peer chunk size exceeds remaining data in fragment")
 	errAlreadyReadingArgument   = errors.New("already reading argument")
 	errNotReadingArgument       = errors.New("not reading argument")
-	errMoreDataInArgument       = errors.New("more data available in argument")
-	errExpectedMoreArguments    = errors.New("more arguments in message")
+	errMoreDataInArgument       = errors.New("closed argument reader when there is more data available to read")
+	errExpectedMoreArguments    = errors.New("closed argument reader when there may be more data available to read")
 	errNoMoreFragments          = errors.New("no more fragments")
 )
 
 type readableFragment struct {
+	isDone       bool
 	flags        byte
 	checksumType ChecksumType
 	checksum     []byte
 	contents     *typed.ReadBuffer
 	onDone       func()
-	isDone       bool
 }
 
 func (f *readableFragment) done() {

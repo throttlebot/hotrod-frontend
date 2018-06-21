@@ -23,6 +23,7 @@ package tchannel
 import (
 	"container/heap"
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,6 +44,9 @@ var (
 
 	// ErrPeerNotFound indicates that the specified peer was not found.
 	ErrPeerNotFound = errors.New("peer not found")
+
+	// ErrNoNewPeers indicates that no previously unselected peer is available.
+	ErrNoNewPeers = errors.New("no new peer available")
 
 	peerRng = trand.NewSeeded()
 )
@@ -75,9 +79,16 @@ func newPeerList(root *RootPeerList) *PeerList {
 	}
 }
 
-// SetStrategy sets customized peer selection stratedgy.
+// SetStrategy sets customized peer selection strategy.
 func (l *PeerList) SetStrategy(sc ScoreCalculator) {
+	l.Lock()
+	defer l.Unlock()
+
 	l.scoreCalculator = sc
+	for _, ps := range l.peersByHostPort {
+		newScore := l.scoreCalculator.GetScore(ps.Peer)
+		l.updatePeer(ps, newScore)
+	}
 }
 
 // Siblings don't share peer lists (though they take care not to double-connect
@@ -89,7 +100,7 @@ func (l *PeerList) newSibling() *PeerList {
 
 // Add adds a peer to the list if it does not exist, or returns any existing peer.
 func (l *PeerList) Add(hostPort string) *Peer {
-	if ps, _, ok := l.exists(hostPort); ok {
+	if ps, ok := l.exists(hostPort); ok {
 		return ps.Peer
 	}
 	l.Lock()
@@ -108,11 +119,12 @@ func (l *PeerList) Add(hostPort string) *Peer {
 	return p
 }
 
-// Get returns a peer from the peer list, or nil if none can be found.
-func (l *PeerList) Get(prevSelected map[string]struct{}) (*Peer, error) {
+// GetNew returns a new, previously unselected peer from the peer list, or nil,
+// if no new unselected peer can be found.
+func (l *PeerList) GetNew(prevSelected map[string]struct{}) (*Peer, error) {
 	l.Lock()
+	defer l.Unlock()
 	if l.peerHeap.Len() == 0 {
-		l.Unlock()
 		return nil, ErrNoPeers
 	}
 
@@ -123,9 +135,25 @@ func (l *PeerList) Get(prevSelected map[string]struct{}) (*Peer, error) {
 		peer = l.choosePeer(prevSelected, false /* avoidHost */)
 	}
 	if peer == nil {
-		peer = l.choosePeer(nil, false /* avoidHost */)
+		return nil, ErrNoNewPeers
 	}
-	l.Unlock()
+	return peer, nil
+}
+
+// Get returns a peer from the peer list, or nil if none can be found,
+// will avoid previously selected peers if possible.
+func (l *PeerList) Get(prevSelected map[string]struct{}) (*Peer, error) {
+	peer, err := l.GetNew(prevSelected)
+	if err == ErrNoNewPeers {
+		l.Lock()
+		peer = l.choosePeer(nil, false /* avoidHost */)
+		l.Unlock()
+	} else if err != nil {
+		return nil, err
+	}
+	if peer == nil {
+		return nil, ErrNoPeers
+	}
 	return peer, nil
 }
 
@@ -188,7 +216,7 @@ func (l *PeerList) choosePeer(prevSelected map[string]struct{}, avoidHost bool) 
 
 // GetOrAdd returns a peer for the given hostPort, creating one if it doesn't yet exist.
 func (l *PeerList) GetOrAdd(hostPort string) *Peer {
-	if ps, _, ok := l.exists(hostPort); ok {
+	if ps, ok := l.exists(hostPort); ok {
 		return ps.Peer
 	}
 	return l.Add(hostPort)
@@ -206,37 +234,62 @@ func (l *PeerList) Copy() map[string]*Peer {
 	return listCopy
 }
 
-// exists checks if a hostport exists in the peer list.
-func (l *PeerList) exists(hostPort string) (*peerScore, uint64, bool) {
-	var score uint64
-
+// Len returns the length of the PeerList.
+func (l *PeerList) Len() int {
 	l.RLock()
-	ps, ok := l.peersByHostPort[hostPort]
-	if ok {
-		score = ps.score
-	}
-	l.RUnlock()
-
-	return ps, score, ok
+	defer l.RUnlock()
+	return l.peerHeap.Len()
 }
 
-// updatePeer is called when there is a change that may cause the peer's score to change.
+// exists checks if a hostport exists in the peer list.
+func (l *PeerList) exists(hostPort string) (*peerScore, bool) {
+	l.RLock()
+	ps, ok := l.peersByHostPort[hostPort]
+	l.RUnlock()
+
+	return ps, ok
+}
+
+// getPeerScore is called to find the peer and its score from a host port key.
+// Note that at least a Read lock must be held to call this function.
+func (l *PeerList) getPeerScore(hostPort string) (*peerScore, uint64, bool) {
+	ps, ok := l.peersByHostPort[hostPort]
+	if !ok {
+		return nil, 0, false
+	}
+	return ps, ps.score, ok
+}
+
+// onPeerChange is called when there is a change that may cause the peer's score to change.
 // The new score is calculated, and the peer heap is updated with the new score if the score changes.
-func (l *PeerList) updatePeer(p *Peer) {
-	ps, psScore, ok := l.exists(p.hostPort)
+func (l *PeerList) onPeerChange(p *Peer) {
+	l.RLock()
+	ps, psScore, ok := l.getPeerScore(p.hostPort)
+	sc := l.scoreCalculator
+	l.RUnlock()
 	if !ok {
 		return
 	}
 
-	newScore := l.scoreCalculator.GetScore(p)
+	newScore := sc.GetScore(ps.Peer)
 	if newScore == psScore {
 		return
 	}
 
 	l.Lock()
+	l.updatePeer(ps, newScore)
+	l.Unlock()
+}
+
+// updatePeer is called to update the score of the peer given the existing score.
+// Note that a Write lock must be held to call this function.
+func (l *PeerList) updatePeer(ps *peerScore, newScore uint64) {
+	if ps.score == newScore {
+		return
+	}
+
 	ps.score = newScore
 	l.peerHeap.updatePeer(ps)
-	l.Unlock()
 }
 
 // peerScore represents a peer and scoring for the peer heap.
@@ -267,12 +320,14 @@ type Peer struct {
 
 	channel             Connectable
 	hostPort            string
+	onStatusChanged     func(*Peer)
 	onClosedConnRemoved func(*Peer)
 
 	// scCount is the number of subchannels that this peer is added to.
 	scCount uint32
 
 	// connections are mutable, and are protected by the mutex.
+	newConnLock         sync.Mutex
 	inboundConnections  []*Connection
 	outboundConnections []*Connection
 	chosenCount         atomic.Uint64
@@ -281,13 +336,17 @@ type Peer struct {
 	onUpdate func(*Peer)
 }
 
-func newPeer(channel Connectable, hostPort string, onClosedConnRemoved func(*Peer)) *Peer {
+func newPeer(channel Connectable, hostPort string, onStatusChanged func(*Peer), onClosedConnRemoved func(*Peer)) *Peer {
 	if hostPort == "" {
 		panic("Cannot create peer with blank hostPort")
+	}
+	if onStatusChanged == nil {
+		onStatusChanged = noopOnStatusChanged
 	}
 	return &Peer{
 		channel:             channel,
 		hostPort:            hostPort,
+		onStatusChanged:     onStatusChanged,
 		onClosedConnRemoved: onClosedConnRemoved,
 	}
 }
@@ -345,15 +404,33 @@ func (p *Peer) GetConnection(ctx context.Context) (*Connection, error) {
 		return activeConn, nil
 	}
 
+	// Lock here to restrict new connection creation attempts to one goroutine
+	p.newConnLock.Lock()
+	defer p.newConnLock.Unlock()
+
+	// Check active connections again in case someone else got ahead of us.
+	if activeConn, ok := p.getActiveConn(); ok {
+		return activeConn, nil
+	}
+
 	// No active connections, make a new outgoing connection.
 	return p.Connect(ctx)
 }
 
-// getConnectionRelay gets a connection, and uses the given timeout if a new
-// connection is required.
+// getConnectionRelay gets a connection, and uses the given timeout to lazily
+// create a context if a new connection is required.
 func (p *Peer) getConnectionRelay(timeout time.Duration) (*Connection, error) {
 	if conn, ok := p.getActiveConn(); ok {
 		return conn, nil
+	}
+
+	// Lock here to restrict new connection creation attempts to one goroutine
+	p.newConnLock.Lock()
+	defer p.newConnLock.Unlock()
+
+	// Check active connections again in case someone else got ahead of us.
+	if activeConn, ok := p.getActiveConn(); ok {
+		return activeConn, nil
 	}
 
 	// When the relay creates outbound connections, we don't want those services
@@ -389,18 +466,21 @@ func (p *Peer) canRemove() bool {
 }
 
 // addConnection adds an active connection to the peer's connection list.
-// If a connection is not active, ErrInvalidConnectionState is returned.
+// If a connection is not active, returns ErrInvalidConnectionState.
 func (p *Peer) addConnection(c *Connection, direction connectionDirection) error {
 	conns := p.connectionsFor(direction)
-
-	p.Lock()
-	defer p.Unlock()
 
 	if c.readState() != connectionActive {
 		return ErrInvalidConnectionState
 	}
 
+	p.Lock()
 	*conns = append(*conns, c)
+	p.Unlock()
+
+	// Inform third parties that a peer gained a connection.
+	p.onStatusChanged(p)
+
 	return nil
 }
 
@@ -417,9 +497,9 @@ func (p *Peer) removeConnection(connsPtr *[]*Connection, changed *Connection) bo
 	conns := *connsPtr
 	for i, c := range conns {
 		if c == changed {
-			// Remove the connection by moving to the end and slicing the list.
+			// Remove the connection by moving the last item forward, and slicing the list.
 			last := len(conns) - 1
-			conns[i], conns[last] = conns[last], conns[i]
+			conns[i], conns[last] = conns[last], nil
 			*connsPtr = conns[:last]
 			return true
 		}
@@ -429,8 +509,10 @@ func (p *Peer) removeConnection(connsPtr *[]*Connection, changed *Connection) bo
 }
 
 // connectionStateChanged is called when one of the peers' connections states changes.
+// All non-active connections are removed from the peer. The connection will
+// still be tracked by the channel until it's completely closed.
 func (p *Peer) connectionCloseStateChange(changed *Connection) {
-	if changed.readState() != connectionClosed {
+	if changed.IsActive() {
 		return
 	}
 
@@ -443,6 +525,8 @@ func (p *Peer) connectionCloseStateChange(changed *Connection) {
 
 	if found {
 		p.onClosedConnRemoved(p)
+		// Inform third parties that a peer lost a connection.
+		p.onStatusChanged(p)
 	}
 }
 
@@ -520,4 +604,11 @@ func (p *Peer) callOnUpdateComplete() {
 	if f != nil {
 		f(p)
 	}
+}
+
+func noopOnStatusChanged(*Peer) {}
+
+// isEphemeralHostPort returns if hostPort is the default ephemeral hostPort.
+func isEphemeralHostPort(hostPort string) bool {
+	return hostPort == "" || hostPort == ephemeralHostPort || strings.HasSuffix(hostPort, ":0")
 }

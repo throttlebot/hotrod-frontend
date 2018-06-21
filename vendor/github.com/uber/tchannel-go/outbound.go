@@ -43,8 +43,6 @@ func (c *Connection) beginCall(ctx context.Context, serviceName, methodName stri
 		break
 	case connectionStartClose, connectionInboundClosed, connectionClosed:
 		return nil, ErrConnectionClosed
-	case connectionWaitingToRecvInitReq, connectionWaitingToSendInitReq, connectionWaitingToRecvInitRes:
-		return nil, ErrConnectionNotReady
 	default:
 		return nil, errConnectionUnknownState{"beginCall", state}
 	}
@@ -63,6 +61,10 @@ func (c *Connection) beginCall(ctx context.Context, serviceName, methodName stri
 		return nil, ErrTimeout
 	}
 
+	if err := ctx.Err(); err != nil {
+		return nil, GetContextError(err)
+	}
+
 	if !c.pendingExchangeMethodAdd() {
 		// Connection is closed, no need to do anything.
 		return nil, ErrInvalidConnectionState
@@ -70,7 +72,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName, methodName stri
 	defer c.pendingExchangeMethodDone()
 
 	requestID := c.NextMessageID()
-	mex, err := c.outbound.newExchange(ctx, c.framePool, messageTypeCallReq, requestID, mexChannelBufferSize)
+	mex, err := c.outbound.newExchange(ctx, c.opts.FramePool, messageTypeCallReq, requestID, mexChannelBufferSize)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +113,7 @@ func (c *Connection) beginCall(ctx context.Context, serviceName, methodName stri
 		return new(callReqContinue)
 	}
 
-	call.contents = newFragmentingWriter(call.log, call, c.checksumType.New())
+	call.contents = newFragmentingWriter(call.log, call, c.opts.ChecksumType.New())
 
 	response := new(OutboundCallResponse)
 	response.startedAt = now
@@ -207,7 +209,12 @@ func (call *OutboundCall) Arg3Writer() (ArgWriter, error) {
 	return call.arg3Writer()
 }
 
-// RemotePeer returns the peer information for this call.
+// LocalPeer returns the local peer information for this call.
+func (call *OutboundCall) LocalPeer() LocalPeerInfo {
+	return call.conn.localPeerInfo
+}
+
+// RemotePeer returns the remote peer information for this call.
 func (call *OutboundCall) RemotePeer() PeerInfo {
 	return call.conn.RemotePeerInfo()
 }
@@ -290,7 +297,13 @@ func (c *Connection) handleError(frame *Frame) bool {
 	}
 
 	if err := c.outbound.forwardPeerFrame(frame); err != nil {
-		c.log.Infof("Failed to forward error frame %v to mex, error: %v", frame.Header, errMsg)
+		c.log.WithFields(
+			LogField{"frameHeader", frame.Header.String()},
+			LogField{"id", errMsg.id},
+			LogField{"errorMessage", errMsg.message},
+			LogField{"errorCode", errMsg.errCode},
+			ErrField(err),
+		).Info("Failed to forward error frame.")
 		return true
 	}
 

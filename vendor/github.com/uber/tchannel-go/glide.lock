@@ -1,31 +1,67 @@
-hash: 111bdf9797d23d4b9f8833a9780e382dd53153af70ad286f99815cea4c2fdf4b
-updated: 2016-08-05T18:02:17.171302481-04:00
+hash: b75ed7f632cfd185b6a8f8bc037b09d32e292f908af6c1e257e444e17a3a39ef
+updated: 2018-01-30T12:06:17.405736-08:00
 imports:
 - name: github.com/apache/thrift
-  version: 0e9fed1e12ed066865e46c6903782b2ef95f4650
+  version: b2a4d4ae21c789b689dd162deb819665567f481c
   subpackages:
   - lib/go/thrift
+- name: github.com/cactus/go-statsd-client
+  version: 138b925ccdf617776955904ba7759fce64406cec
+  subpackages:
+  - statsd
+- name: github.com/facebookgo/clock
+  version: 600d898af40aa09a7a93ecb9265d87b0504b6f03
+- name: github.com/opentracing/opentracing-go
+  version: 1949ddbfd147afd4d964a9f00b24eb291e0e7c38
+  subpackages:
+  - ext
+  - log
+  - mocktracer
+- name: github.com/samuel/go-thrift
+  version: e9042807f4f5bf47563df6992d3ea0857313e2be
+  subpackages:
+  - parser
+- name: github.com/uber-go/atomic
+  version: 8474b86a5a6f79c443ce4b2992817ff32cf208b8
+  subpackages:
+  - utils
+- name: github.com/uber-go/tally
+  version: 6c4631652c6aab57c64f65c2e0aaec2e9aae3a64
+- name: github.com/uber/jaeger-client-go
+  version: 3ac96c6e679cb60a74589b0d0aa7c70a906183f7
+  subpackages:
+  - internal/baggage
+  - internal/spanlog
+  - log
+  - thrift-gen/agent
+  - thrift-gen/jaeger
+  - thrift-gen/sampling
+  - thrift-gen/zipkincore
+  - utils
+- name: golang.org/x/net
+  version: 0ed95abb35c445290478a5348a7b38bb154135fd
+  subpackages:
+  - bpf
+  - context
+  - internal/iana
+  - internal/socket
+  - ipv4
+  - ipv6
+testImports:
 - name: github.com/bmizerany/perks
   version: d9a9656a3a4b1c2864fdb44db2ef8619772d92aa
   subpackages:
   - quantile
-- name: github.com/cactus/go-statsd-client
-  version: 91c326c3f7bd20f0226d3d1c289dd9f8ce28d33d
-  subpackages:
-  - statsd
+- name: github.com/codahale/hdrhistogram
+  version: 3a0bb77429bd3a61596f5e8a3172445844342120
 - name: github.com/crossdock/crossdock-go
-  version: 228792ab861c86f8900b2db0439577feef9ec9d8
-  subpackages:
-  - assert
-  - require
+  version: 049aabb0122b03bc9bd30cab8f3f91fb60166361
 - name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  version: 346938d642f2ec3594ed81d874461961cd0faa76
   subpackages:
   - spew
 - name: github.com/jessevdk/go-flags
-  version: f2785f5820ec967043de79c8be97edfc464ca745
-- name: github.com/opentracing/opentracing-go
-  version: 855519783f479520497c6b3445611b05fc42f009
+  version: 96dc06278ce32a0e9d957d590bb987c81ee66407
   subpackages:
   - ext
   - mocktracer
@@ -34,36 +70,20 @@ imports:
   subpackages:
   - difflib
 - name: github.com/prashantv/protectmem
-  version: d0cabd7ce64237b84414449086fa42810ae01a92
-- name: github.com/samuel/go-thrift
-  version: e9042807f4f5bf47563df6992d3ea0857313e2be
-  subpackages:
-  - parser
+  version: e20412882b3adb9cabd3e9013d68adbfff9ea946
 - name: github.com/streadway/quantile
   version: b0c588724d25ae13f5afb3d90efec0edc636432b
 - name: github.com/stretchr/objx
-  version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
+  version: 8a3f7159479fbc75b30357fbc48f380b7320f08e
 - name: github.com/stretchr/testify
-  version: d77da356e56a7428ad25149ca77381849a6a5232
+  version: b91bfb9ebec76498946beb6af7c0230c7cc7ba6c
   subpackages:
   - assert
   - mock
   - require
-- name: github.com/uber-go/atomic
-  version: e682c1008ac17bf26d2e4b5ad6cdd08520ed0b22
-- name: github.com/uber/jaeger-client-go
-  version: 9342cec8070f1d9bbf56f8df1d7a885ed8cb015d
+- name: github.com/uber/jaeger-lib
+  version: 7f95f4f7e80028096410abddaae2556e4c61b59f
   subpackages:
-  - thrift-gen/sampling
-  - thrift-gen/zipkincore
-  - transport
-  - utils
-  - thrift-gen/agent
-- name: golang.org/x/net
-  version: b400c2eff1badec7022a8c8f5bea058b6315eed7
-  subpackages:
-  - context
-  - context/ctxhttp
+  - metrics
 - name: gopkg.in/yaml.v2
-  version: a83829b6f1293c91addabc89d0571c246397bbf4
-devImports: []
+  version: d670f9405373e636a5a2765eea47fac0c9bc91a4

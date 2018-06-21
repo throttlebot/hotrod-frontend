@@ -30,6 +30,7 @@ import (
 var (
 	_callerNameKeyBytes      = []byte(CallerName)
 	_routingDelegateKeyBytes = []byte(RoutingDelegate)
+	_routingKeyKeyBytes      = []byte(RoutingKey)
 )
 
 const (
@@ -86,7 +87,7 @@ func (cr lazyCallRes) OK() bool {
 type lazyCallReq struct {
 	*Frame
 
-	caller, method, delegate []byte
+	caller, method, delegate, key []byte
 }
 
 // TODO: Consider pooling lazyCallReq and using pointers to the struct.
@@ -118,6 +119,8 @@ func newLazyCallReq(f *Frame) lazyCallReq {
 			cr.caller = val
 		} else if bytes.Equal(key, _routingDelegateKeyBytes) {
 			cr.delegate = val
+		} else if bytes.Equal(key, _routingKeyKeyBytes) {
+			cr.key = val
 		}
 	}
 
@@ -153,10 +156,21 @@ func (f lazyCallReq) RoutingDelegate() []byte {
 	return f.delegate
 }
 
+// RoutingKey returns the routing delegate for this call req, if any.
+func (f lazyCallReq) RoutingKey() []byte {
+	return f.key
+}
+
 // TTL returns the time to live for this callReq.
 func (f lazyCallReq) TTL() time.Duration {
 	ttl := binary.BigEndian.Uint32(f.Payload[_ttlIndex : _ttlIndex+_ttlLen])
 	return time.Duration(ttl) * time.Millisecond
+}
+
+// SetTTL overwrites the frame's TTL.
+func (f lazyCallReq) SetTTL(d time.Duration) {
+	ttl := uint32(d / time.Millisecond)
+	binary.BigEndian.PutUint32(f.Payload[_ttlIndex:_ttlIndex+_ttlLen], ttl)
 }
 
 // Span returns the Span
