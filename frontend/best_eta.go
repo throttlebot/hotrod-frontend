@@ -95,6 +95,11 @@ type routeResult struct {
 }
 
 // getRoutes calls Route service for each (customer, driver) pair
+// Some math:
+// - The ETA is an integer in [0, 546] with CDF: P(ETA < y) = F(y) = 1 - ((2^15 - 1 - y * 60) / (2^15 - 1))^50
+// - there is about a 40% chance that the best ETA > 10 minutes
+// - there is about a 10% chance that the best ETA > 25 minutes
+// - Expected value of ETA is 10.7 minutes
 func (eta *bestETA) getRoutes(ctx context.Context, customer *customer.Customer, drivers []driver.Driver) []routeResult {
 	results := make([]routeResult, 0, len(drivers))
 	wg := sync.WaitGroup{}
