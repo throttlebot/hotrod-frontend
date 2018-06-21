@@ -172,7 +172,7 @@
     "driver",
     "driver/thrift-gen/driver"
   ]
-  revision = "6ebae6bbe434cf1b1e25bdd2fc6f1787a9e0f2ab"
+  revision = "63f106cb0cf5709f997b53a04b9ad4b37042f57b"
 
 [[projects]]
   branch = "master"
