@@ -21,8 +21,8 @@ import (
 	"github.com/elazarl/go-bindata-assetfs"
 	log "github.com/sirupsen/logrus"
 
-	"gitlab.com/kelda-hotrod/hotrod-base/pkg/httperr"
-	"gitlab.com/kelda-hotrod/hotrod-base/pkg/tracing"
+	"gitlab.com/will.wang1/hotrod-base/pkg/httperr"
+	"gitlab.com/will.wang1/hotrod-base/pkg/tracing"
 
 	"context"
 	"github.com/prometheus/client_golang/prometheus"

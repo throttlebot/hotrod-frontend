@@ -20,7 +20,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"gitlab.com/kelda-hotrod/hotrod-frontend/frontend"
+	"gitlab.com/will.wang1/hotrod-frontend/frontend"
 )
 
 // frontendCmd represents the frontend command

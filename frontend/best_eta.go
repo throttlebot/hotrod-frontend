@@ -23,11 +23,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"gitlab.com/kelda-hotrod/hotrod-base/config"
-	"gitlab.com/kelda-hotrod/hotrod-base/pkg/pool"
-	"gitlab.com/kelda-hotrod/hotrod-customer/customer"
-	"gitlab.com/kelda-hotrod/hotrod-driver/driver"
-	"gitlab.com/kelda-hotrod/hotrod-route/route"
+	"gitlab.com/will.wang1/hotrod-base/config"
+	"gitlab.com/will.wang1/hotrod-base/pkg/pool"
+	"gitlab.com/will.wang1/hotrod-customer/customer"
+	"gitlab.com/will.wang1/hotrod-driver/driver"
+	"gitlab.com/will.wang1/hotrod-route/route"
 )
 
 type bestETA struct {
