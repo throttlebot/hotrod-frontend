@@ -74,6 +74,7 @@ func (eta *bestETA) Get(ctx context.Context, customerID string) (*Response, erro
 		if result.err != nil {
 			return nil, err
 		}
+		log.WithField("driver", resp.Driver).WithField("eta", resp.ETA.String()).Info("Driver time")
 		if result.route.ETA < resp.ETA {
 			resp.ETA = result.route.ETA
 			resp.Driver = result.driver
