@@ -68,23 +68,23 @@ func (eta *bestETA) Get(ctx context.Context, customerID string) (*Response, erro
 	results := eta.getRoutes(ctx, customer, drivers)
 	log.WithField("routes", results).Info("Found routes")
 
-	resp := &Response{ETA: math.MaxInt64}
+	bestETAResp := &Response{ETA: math.MaxInt64}
 	for _, result := range results {
 		if result.err != nil {
 			return nil, err
 		}
 		log.WithField("driver", resp.Driver).WithField("eta", resp.ETA.String()).Info("Driver time")
-		if result.route.ETA < resp.ETA {
-			resp.ETA = result.route.ETA
-			resp.Driver = result.driver
+		if result.route.ETA < bestETAResp.ETA {
+			bestETAResp.ETA = result.route.ETA
+			bestETAResp.Driver = result.driver
 		}
 	}
-	if resp.Driver == "" {
+	if bestETAResp.Driver == "" {
 		return nil, errors.New("No routes found")
 	}
 
-	log.WithField("driver", resp.Driver).WithField("eta", resp.ETA.String()).Info("Dispatch successful")
-	return resp, nil
+	log.WithField("driver", bestETAResp.Driver).WithField("eta", bestETAResp.ETA.String()).Info("Dispatch successful")
+	return bestETAResp, nil
 }
 
 type routeResult struct {
