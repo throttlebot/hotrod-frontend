@@ -86,6 +86,7 @@ production:
   stage: deploy
   environment:
       name: ProdEnv
+  when: manual
   script:
     - sed -i -e s/COMMITID/$CI_COMMIT_SHA/g hotrod.yaml
     - sed -i -e s/GITLAB_CI_ENV_SLUG/$CI_ENVIRONMENT_SLUG/g hotrod.yaml
