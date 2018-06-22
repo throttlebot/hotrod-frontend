@@ -21,12 +21,14 @@ import (
 	"github.com/elazarl/go-bindata-assetfs"
 	log "github.com/sirupsen/logrus"
 
-	"gitlab.com/kelda-hotrod/hotrod-base/pkg/tracing"
 	"gitlab.com/kelda-hotrod/hotrod-base/pkg/httperr"
+	"gitlab.com/kelda-hotrod/hotrod-base/pkg/tracing"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"context"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"strconv"
+	"time"
 )
 
 // Server implements jaeger-demo-frontend service
