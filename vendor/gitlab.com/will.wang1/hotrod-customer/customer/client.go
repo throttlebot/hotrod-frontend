@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -42,9 +43,13 @@ func NewClient() *Client {
 func (c *Client) Get(ctx context.Context, customerID string) (*Customer, error) {
 	log.WithField("customer_id", customerID).Info("Getting customer")
 
-	clientIP := "hotrod-customer:8081"
+	customerHost := os.Getenv("HOTROD_CUSTOMER_HOST")
+	if customerHost == "" {
+		customerHost = "hotrod-customer"
+	}
+	customerHost += ":8081"
 
-	url := fmt.Sprintf("http://" + clientIP + "/customer?customer=%s", customerID)
+	url := fmt.Sprintf("http://"+customerHost+"/customer?customer=%s", customerID)
 	var customer Customer
 	if err := c.client.GetJSON(ctx, "/customer", url, &customer); err != nil {
 		return nil, err

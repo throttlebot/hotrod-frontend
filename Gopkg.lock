@@ -157,13 +157,13 @@
     "pkg/pool",
     "pkg/tracing"
   ]
-  revision = "45976170c3c1ca9e8220c867c7a576ed28e26ced"
+  revision = "572612785bff1ab0338d4cbe66039c9596e2b2e2"
 
 [[projects]]
   branch = "master"
   name = "gitlab.com/will.wang1/hotrod-customer"
   packages = ["customer"]
-  revision = "1074f72d6e9f6d4e5bdaa49f16452a75c9fb2d49"
+  revision = "75a1a135226876800291b5b3aea7042d1b4c2afd"
 
 [[projects]]
   branch = "master"
@@ -172,13 +172,13 @@
     "driver",
     "driver/thrift-gen/driver"
   ]
-  revision = "63f106cb0cf5709f997b53a04b9ad4b37042f57b"
+  revision = "6d6b7951b7eb2eb1a75444dc6f0cfdb51c25f9ad"
 
 [[projects]]
   branch = "master"
   name = "gitlab.com/will.wang1/hotrod-route"
   packages = ["route"]
-  revision = "f2e166fc40fd88d3564046497f072b8b25d4067a"
+  revision = "6dfe06b60224b6dd7d3be4d9738497f8bc8b319f"
 
 [[projects]]
   branch = "master"

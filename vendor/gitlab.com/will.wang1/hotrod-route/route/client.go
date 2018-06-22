@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -26,17 +27,22 @@ import (
 
 // Client is a remote client that implements route.Interface
 type Client struct {
-	client *tracing.HTTPClient
-	clientIP string
+	client    *tracing.HTTPClient
+	routeHost string
 }
 
 // NewClient creates a new route.Client
 func NewClient() *Client {
+	routeHost := os.Getenv("HOTROD_ROUTE_HOST")
+	if routeHost == "" {
+		routeHost = "hotrod-route"
+	}
+	routeHost += ":8083"
 	return &Client{
 		client: &tracing.HTTPClient{
 			Client: http.DefaultClient,
 		},
-		clientIP: "hotrod-route:8083",
+		routeHost: routeHost,
 	}
 }
 
@@ -48,7 +54,7 @@ func (c *Client) FindRoute(ctx context.Context, pickup, dropoff string) (*Route,
 	v.Set("pickup", pickup)
 	v.Set("dropoff", dropoff)
 
-	url := "http://" + c.clientIP + "/route?" + v.Encode()
+	url := "http://" + c.routeHost + "/route?" + v.Encode()
 
 	var route Route
 	if err := c.client.GetJSON(ctx, "/route", url, &route); err != nil {

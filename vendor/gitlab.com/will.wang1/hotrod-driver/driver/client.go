@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/thrift"
+	"os"
 
 	"gitlab.com/will.wang1/hotrod-driver/driver/thrift-gen/driver"
 	"time"
@@ -39,10 +40,15 @@ func NewClient() *Client {
 	if err != nil {
 		log.WithError(err).Fatal("Cannot create TChannel")
 	}
-	clientIP := "hotrod-driver:8082"
+
+	driverHost := os.Getenv("HOTROD_DRIVER_HOST")
+	if driverHost == "" {
+		driverHost = "hotrod-driver"
+	}
+	driverHost += ":8082"
 
 	clientOpts := &thrift.ClientOptions{
-		HostPort: clientIP,
+		HostPort: driverHost,
 	}
 	thriftClient := thrift.NewClient(ch, "driver", clientOpts)
 	client := driver.NewTChanDriverClient(thriftClient)
