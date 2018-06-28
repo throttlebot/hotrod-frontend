@@ -14,12 +14,6 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
-  name = "github.com/elazarl/go-bindata-assetfs"
-  packages = ["."]
-  revision = "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43"
-  version = "v1.0.0"
-
-[[projects]]
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -163,7 +157,7 @@
   branch = "master"
   name = "gitlab.com/will.wang1/hotrod-customer"
   packages = ["customer"]
-  revision = "75a1a135226876800291b5b3aea7042d1b4c2afd"
+  revision = "7b763c61038d81aba807621a6cdf59ea7e1a97e9"
 
 [[projects]]
   branch = "master"
@@ -211,6 +205,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "94ea1aa8da97a0c06e33853e8cb98c040aea8768119f4135f02123117863d683"
+  inputs-digest = "0e498334917f899456b7b1d8479f4b22ee160ab0c58651171b21fff9cd03b9df"
   solver-name = "gps-cdcl"
   solver-version = 1

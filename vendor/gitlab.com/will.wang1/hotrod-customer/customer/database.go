@@ -46,3 +46,24 @@ func (d *database) Get(ctx context.Context, customerID string) (*Customer, error
 		&customer.Name, &customer.Location)
 	return &customer, err
 }
+
+func (d *database) List(ctx context.Context ) ([]Customer, error) {
+	log.Info("Loading all customers")
+	rows, err := d.Query("SELECT name, id FROM customers")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	customers := make([]Customer, 0)
+	for rows.Next() {
+		var id, name string
+		rows.Scan(&name, &id)
+		customers = append(customers, Customer{
+			Name: name,
+			ID: id,
+		})
+	}
+
+	return customers, rows.Err()
+}

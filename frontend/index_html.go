@@ -1,4 +1,10 @@
-<html>
+package frontend
+
+import (
+	"html/template"
+)
+
+var indexHTML = template.Must(template.New("index").Parse(`<html>
   <meta charset="ISO-8859-1">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <head>
@@ -23,26 +29,13 @@
         <h1>Hot R.O.D.</h1>
         <h4><em>Rides by Will</em></h4>
         <div class="row">
-            <div class="col-md-3 col-sm-6">
-                <span
-                    class="btn btn-info btn-block hotrod-button"
-                    data-customer="123">Rachel's Floral Designs</span>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <span
-                    class="btn btn-info btn-block hotrod-button"
-                    data-customer="392">Kevin Lin <img width="100px" height="100px" src="https://media.licdn.com/dms/image/C5603AQHiNLnsWi-00Q/profile-displayphoto-shrink_800_800/0?e=1535587200&v=beta&t=Cx3AEDv4KE2a-48gvH_jwOd9S_Xrs-AXQ-dkfdI7Tks"></img></span>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <span
-                    class="btn btn-info btn-block hotrod-button"
-                    data-customer="731">Japanese Deserts</span>
-            </div>
-            <div class="col-md-3 col-sm-6">
-                <span
-                    class="btn btn-info btn-block hotrod-button"
-                    data-customer="567">Amazing Coffee Roasters</span>
-            </div>
+			{{range .Customers}}
+				<div class="col-md-3 col-sm-6">
+					<span
+						class="btn btn-info btn-block hotrod-button"
+						data-customer="{{.ID}}">{{.Name}}</span>
+				</div>
+			{{end}}
         </div>
         <div id="tip">Click on customer name above to order a car.</div>
         <div id="hotrod-log" class="lead"></div>
@@ -87,4 +80,4 @@ $(".hotrod-button").click(function(evt) {
 
   </script>
 
-</html>
+</html>`))

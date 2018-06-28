@@ -18,11 +18,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/elazarl/go-bindata-assetfs"
 	log "github.com/sirupsen/logrus"
 
 	"gitlab.com/will.wang1/hotrod-base/pkg/httperr"
 	"gitlab.com/will.wang1/hotrod-base/pkg/tracing"
+	"gitlab.com/will.wang1/hotrod-customer/customer"
 
 	"context"
 	"github.com/prometheus/client_golang/prometheus"
@@ -33,17 +33,17 @@ import (
 
 // Server implements jaeger-demo-frontend service
 type Server struct {
-	hostPort string
-	bestETA  *bestETA
-	assetFs  *assetfs.AssetFS
+	customerClient customer.Interface
+	hostPort       string
+	bestETA        *bestETA
 }
 
 // NewServer creates a new frontend.Server
 func NewServer(hostPort string) *Server {
 	return &Server{
-		hostPort: hostPort,
-		bestETA:  newBestETA(),
-		assetFs:  assetFS(),
+		customerClient: customer.NewClient(),
+		hostPort:       hostPort,
+		bestETA:        newBestETA(),
 	}
 }
 
@@ -75,14 +75,20 @@ func (s *Server) createServeMux() http.Handler {
 
 func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 	log.WithField("method", r.Method).WithField("url", r.URL).Info("HTTP")
-	b, err := s.assetFs.Asset("web_assets/index.html")
-	if err != nil {
-		http.Error(w, "Could not load index page", http.StatusInternalServerError)
-		log.WithError(err).Error("Could not load static assets")
+
+	customers, err := s.customerClient.ListCustomerPublicInfo(r.Context())
+	if httperr.HandleError(w, err, http.StatusInternalServerError) {
+		log.WithError(err).Error("Failed to query customers")
 		httpReqs.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method, r.URL.Path).Inc()
 		return
 	}
-	w.Write(b)
+
+	indexHTMLData := struct{ Customers []customer.Customer }{customers}
+	if err := indexHTML.Execute(w, indexHTMLData); httperr.HandleError(w, err, http.StatusInternalServerError) {
+		log.WithError(err).Error("Failed to generate index response")
+		httpReqs.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method, r.URL.Path).Inc()
+		return
+	}
 
 	httpReqs.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method, r.URL.Path).Inc()
 

@@ -26,4 +26,5 @@ type Customer struct {
 // Interface exposed by the Customer service.
 type Interface interface {
 	Get(ctx context.Context, customerID string) (*Customer, error)
+	ListCustomerPublicInfo(ctx context.Context) ([]Customer, error)
 }
