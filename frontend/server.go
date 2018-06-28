@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/elazarl/go-bindata-assetfs"
 	log "github.com/sirupsen/logrus"
 
 	"gitlab.com/will.wang1/hotrod-base/pkg/httperr"
@@ -35,7 +34,6 @@ import (
 type Server struct {
 	hostPort string
 	bestETA  *bestETA
-	assetFs  *assetfs.AssetFS
 }
 
 // NewServer creates a new frontend.Server
@@ -43,7 +41,6 @@ func NewServer(hostPort string) *Server {
 	return &Server{
 		hostPort: hostPort,
 		bestETA:  newBestETA(),
-		assetFs:  assetFS(),
 	}
 }
 
@@ -75,14 +72,7 @@ func (s *Server) createServeMux() http.Handler {
 
 func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 	log.WithField("method", r.Method).WithField("url", r.URL).Info("HTTP")
-	b, err := s.assetFs.Asset("web_assets/index.html")
-	if err != nil {
-		http.Error(w, "Could not load index page", http.StatusInternalServerError)
-		log.WithError(err).Error("Could not load static assets")
-		httpReqs.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method, r.URL.Path).Inc()
-		return
-	}
-	w.Write(b)
+	w.Write([]byte(indexHTML))
 
 	httpReqs.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method, r.URL.Path).Inc()
 

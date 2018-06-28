@@ -1,4 +1,6 @@
-<html>
+package frontend
+
+const indexHTML = `<html>
   <meta charset="ISO-8859-1">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <head>
@@ -87,4 +89,4 @@ $(".hotrod-button").click(function(evt) {
 
   </script>
 
-</html>
+</html>`
