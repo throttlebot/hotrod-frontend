@@ -163,7 +163,7 @@
   branch = "master"
   name = "gitlab.com/will.wang1/hotrod-customer"
   packages = ["customer"]
-  revision = "75a1a135226876800291b5b3aea7042d1b4c2afd"
+  revision = "7b763c61038d81aba807621a6cdf59ea7e1a97e9"
 
 [[projects]]
   branch = "master"

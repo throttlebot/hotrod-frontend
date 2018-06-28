@@ -27,15 +27,22 @@ import (
 
 // Client is a remote client that implements customer.Interface
 type Client struct {
-	client *tracing.HTTPClient
+	client 	*tracing.HTTPClient
+	address string
 }
 
 // NewClient creates a new customer.Client
 func NewClient() *Client {
+	customerHost := os.Getenv("HOTROD_CUSTOMER_HOST")
+	if customerHost == "" {
+		customerHost = "hotrod-customer"
+	}
+
 	return &Client{
 		client: &tracing.HTTPClient{
 			Client: http.DefaultClient,
 		},
+		address: "http://" + customerHost + ":8081",
 	}
 }
 
@@ -43,16 +50,20 @@ func NewClient() *Client {
 func (c *Client) Get(ctx context.Context, customerID string) (*Customer, error) {
 	log.WithField("customer_id", customerID).Info("Getting customer")
 
-	customerHost := os.Getenv("HOTROD_CUSTOMER_HOST")
-	if customerHost == "" {
-		customerHost = "hotrod-customer"
-	}
-	customerHost += ":8081"
-
-	url := fmt.Sprintf("http://"+customerHost+"/customer?customer=%s", customerID)
+	url := fmt.Sprintf(c.address + "/customer?customer=%s", customerID)
 	var customer Customer
 	if err := c.client.GetJSON(ctx, "/customer", url, &customer); err != nil {
 		return nil, err
 	}
 	return &customer, nil
+}
+
+func (c *Client) ListCustomerPublicInfo(ctx context.Context) ([]Customer, error) {
+	log.Info("Getting all customers")
+	url := c.address + "/list"
+	var customers []Customer
+	if err := c.client.GetJSON(ctx, "/customer", url, &customers); err != nil {
+		return nil, err
+	}
+	return customers, nil
 }
