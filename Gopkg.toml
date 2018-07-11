@@ -26,6 +26,22 @@
 
 
 [[constraint]]
+  branch = "master"
+  name = "github.com/kelda-inc/hotrod-base"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/kelda-inc/hotrod-customer"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/kelda-inc/hotrod-driver"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/kelda-inc/hotrod-route"
+
+[[constraint]]
   name = "github.com/prometheus/client_golang"
   version = "0.8.0"
 
@@ -36,22 +52,6 @@
 [[constraint]]
   name = "github.com/spf13/cobra"
   version = "0.0.3"
-
-[[constraint]]
-  branch = "master"
-  name = "gitlab.com/will.wang1/hotrod-base"
-
-[[constraint]]
-  branch = "master"
-  name = "gitlab.com/will.wang1/hotrod-customer"
-
-[[constraint]]
-  branch = "master"
-  name = "gitlab.com/will.wang1/hotrod-driver"
-
-[[constraint]]
-  branch = "master"
-  name = "gitlab.com/will.wang1/hotrod-route"
 
 [prune]
   go-tests = true

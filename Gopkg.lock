@@ -42,6 +42,36 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/kelda-inc/hotrod-base"
+  packages = [
+    "config",
+    "pkg/delay",
+    "pkg/httperr",
+    "pkg/pool",
+    "pkg/tracing"
+  ]
+  revision = "1b4b1be1ff48a8269837aaa62fe8e1dcf8486a00"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kelda-inc/hotrod-customer"
+  packages = ["customer"]
+  revision = "77a64e8fc1853e899caf1fb93c58aca4ca2bae37"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kelda-inc/hotrod-driver"
+  packages = ["driver"]
+  revision = "f2e809cbbe2bfa79a9b456185a174fed6d8d836c"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/kelda-inc/hotrod-route"
+  packages = ["route"]
+  revision = "62993db7851858d53e9637b19dceb1cfcab6974f"
+
+[[projects]]
+  branch = "master"
   name = "github.com/lib/pq"
   packages = [
     ".",
@@ -99,7 +129,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "7d6f385de8bea29190f15ba9931442a0eaef9af7"
+  revision = "ae68e2d4c00fed4943b5f6698d504a5fe083da8a"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
@@ -138,8 +168,8 @@
     "trand",
     "typed"
   ]
-  revision = "cc0c40929b0dbdb755b727a8c253de2b5d4af46b"
-  version = "v1.10.0"
+  revision = "7f5c12c66261f3ac3c5dde959d65eed59e3b63af"
+  version = "v1.11.0"
 
 [[projects]]
   branch = "master"
@@ -148,31 +178,15 @@
     "config",
     "pkg/delay",
     "pkg/httperr",
-    "pkg/pool",
     "pkg/tracing"
   ]
-  revision = "572612785bff1ab0338d4cbe66039c9596e2b2e2"
-
-[[projects]]
-  branch = "master"
-  name = "gitlab.com/will.wang1/hotrod-customer"
-  packages = ["customer"]
-  revision = "7b763c61038d81aba807621a6cdf59ea7e1a97e9"
+  revision = "ad2f1a0e66218681dc36b1a204426bf0534ed4a3"
 
 [[projects]]
   branch = "master"
   name = "gitlab.com/will.wang1/hotrod-driver"
-  packages = [
-    "driver",
-    "driver/thrift-gen/driver"
-  ]
+  packages = ["driver/thrift-gen/driver"]
   revision = "6d6b7951b7eb2eb1a75444dc6f0cfdb51c25f9ad"
-
-[[projects]]
-  branch = "master"
-  name = "gitlab.com/will.wang1/hotrod-route"
-  packages = ["route"]
-  revision = "6dfe06b60224b6dd7d3be4d9738497f8bc8b319f"
 
 [[projects]]
   branch = "master"
@@ -191,7 +205,7 @@
     "ipv4",
     "ipv6"
   ]
-  revision = "afe8f62b1d6bbd81f31868121a50b06d8188e1f9"
+  revision = "039a4258aec0ad3c79b905677cceeab13b296a77"
 
 [[projects]]
   branch = "master"
@@ -200,11 +214,11 @@
     "unix",
     "windows"
   ]
-  revision = "ad87a3a340fa7f3bed189293fbfa7a9b7e021ae1"
+  revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0e498334917f899456b7b1d8479f4b22ee160ab0c58651171b21fff9cd03b9df"
+  inputs-digest = "d6d5a4a635e1b319db0f3e4db44ee6fe353532a38226575659aeffb8f8555616"
   solver-name = "gps-cdcl"
   solver-version = 1

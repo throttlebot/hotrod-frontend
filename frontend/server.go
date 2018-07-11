@@ -20,9 +20,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"gitlab.com/will.wang1/hotrod-base/pkg/httperr"
-	"gitlab.com/will.wang1/hotrod-base/pkg/tracing"
-	"gitlab.com/will.wang1/hotrod-customer/customer"
+	"github.com/kelda-inc/hotrod-base/pkg/httperr"
+	"github.com/kelda-inc/hotrod-base/pkg/tracing"
+	"github.com/kelda-inc/hotrod-customer/customer"
 
 	"context"
 	"github.com/prometheus/client_golang/prometheus"

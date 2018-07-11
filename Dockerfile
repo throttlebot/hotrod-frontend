@@ -3,11 +3,11 @@ MAINTAINER Hantao Wang
 
 EXPOSE 8080
 
-RUN mkdir -p /go/src/gitlab.com/will.wang1
+RUN mkdir -p /go/src/github.com/kelda-inc
 RUN mkdir -p /go/bin
 
-ADD . /go/src/gitlab.com/will.wang1/hotrod-frontend
-WORKDIR /go/src/gitlab.com/will.wang1/hotrod-frontend
+ADD . /go/src/github.com/kelda-inc/hotrod-frontend
+WORKDIR /go/src/github.com/kelda-inc/hotrod-frontend
 
 RUN go build -o hotrod main.go
 RUN mv hotrod /go/bin/

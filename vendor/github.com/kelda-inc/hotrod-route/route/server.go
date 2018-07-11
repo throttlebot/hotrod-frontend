@@ -25,10 +25,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 
-	"gitlab.com/will.wang1/hotrod-base/config"
-	"gitlab.com/will.wang1/hotrod-base/pkg/delay"
-	"gitlab.com/will.wang1/hotrod-base/pkg/httperr"
-	"gitlab.com/will.wang1/hotrod-base/pkg/tracing"
+	"github.com/kelda-inc/hotrod-base/config"
+	"github.com/kelda-inc/hotrod-base/pkg/delay"
+	"github.com/kelda-inc/hotrod-base/pkg/httperr"
+	"github.com/kelda-inc/hotrod-base/pkg/tracing"
 )
 
 // Server implements Route service
