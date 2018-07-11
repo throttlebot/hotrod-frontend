@@ -19,7 +19,7 @@ import (
 	"github.com/uber/tchannel-go"
 	"github.com/uber/tchannel-go/thrift"
 
-	"gitlab.com/will.wang1/hotrod-driver/driver/thrift-gen/driver"
+	"github.com/kelda-inc/hotrod-driver/driver/thrift-gen/driver"
 )
 
 // Server implements jaeger-demo-frontend service

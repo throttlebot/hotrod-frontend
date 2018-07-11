@@ -22,7 +22,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"gitlab.com/will.wang1/hotrod-base/pkg/tracing"
+	"github.com/kelda-inc/hotrod-base/pkg/tracing"
 )
 
 // Client is a remote client that implements customer.Interface

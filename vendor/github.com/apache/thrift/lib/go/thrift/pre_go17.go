@@ -1,3 +1,5 @@
+// +build !go1.7
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements. See the NOTICE file
@@ -19,51 +21,6 @@
 
 package thrift
 
-// Type constants in the Thrift protocol
-type TType byte
+import "golang.org/x/net/context"
 
-const (
-	STOP   = 0
-	VOID   = 1
-	BOOL   = 2
-	BYTE   = 3
-	I08    = 3
-	DOUBLE = 4
-	I16    = 6
-	I32    = 8
-	I64    = 10
-	STRING = 11
-	UTF7   = 11
-	STRUCT = 12
-	MAP    = 13
-	SET    = 14
-	LIST   = 15
-	UTF8   = 16
-	UTF16  = 17
-	//BINARY = 18   wrong and unusued
-)
-
-var typeNames = map[int]string{
-	STOP:   "STOP",
-	VOID:   "VOID",
-	BOOL:   "BOOL",
-	BYTE:   "BYTE",
-	DOUBLE: "DOUBLE",
-	I16:    "I16",
-	I32:    "I32",
-	I64:    "I64",
-	STRING: "STRING",
-	STRUCT: "STRUCT",
-	MAP:    "MAP",
-	SET:    "SET",
-	LIST:   "LIST",
-	UTF8:   "UTF8",
-	UTF16:  "UTF16",
-}
-
-func (p TType) String() string {
-	if s, ok := typeNames[int(p)]; ok {
-		return s
-	}
-	return "Unknown"
-}
+var defaultCtx = context.Background()

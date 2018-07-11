@@ -4,8 +4,8 @@
 [[projects]]
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
-  revision = "53dd39833a08ce33582e5ff31fa18bb4735d6731"
-  version = "0.9.3"
+  revision = "327ebb6c2b6df8bf075da02ef45a2a034e9b79ba"
+  version = "0.11.0"
 
 [[projects]]
   branch = "master"
@@ -56,13 +56,16 @@
   branch = "master"
   name = "github.com/kelda-inc/hotrod-customer"
   packages = ["customer"]
-  revision = "77a64e8fc1853e899caf1fb93c58aca4ca2bae37"
+  revision = "d1911de532c609c916f12f0d9c6c57425c2eeafc"
 
 [[projects]]
   branch = "master"
   name = "github.com/kelda-inc/hotrod-driver"
-  packages = ["driver"]
-  revision = "f2e809cbbe2bfa79a9b456185a174fed6d8d836c"
+  packages = [
+    "driver",
+    "driver/thrift-gen/driver"
+  ]
+  revision = "339b3464f2bbbdd3b31acde9a0fe38a8ebe8f0b2"
 
 [[projects]]
   branch = "master"
@@ -170,23 +173,6 @@
   ]
   revision = "7f5c12c66261f3ac3c5dde959d65eed59e3b63af"
   version = "v1.11.0"
-
-[[projects]]
-  branch = "master"
-  name = "gitlab.com/will.wang1/hotrod-base"
-  packages = [
-    "config",
-    "pkg/delay",
-    "pkg/httperr",
-    "pkg/tracing"
-  ]
-  revision = "ad2f1a0e66218681dc36b1a204426bf0534ed4a3"
-
-[[projects]]
-  branch = "master"
-  name = "gitlab.com/will.wang1/hotrod-driver"
-  packages = ["driver/thrift-gen/driver"]
-  revision = "6d6b7951b7eb2eb1a75444dc6f0cfdb51c25f9ad"
 
 [[projects]]
   branch = "master"
