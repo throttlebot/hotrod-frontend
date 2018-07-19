@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hotrod-frontend
+  namespace: hotrod
   labels:
     appName: hotrod-frontend
 spec:
@@ -18,25 +19,24 @@ spec:
 apiVersion: apps/v1beta2 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
 kind: Deployment
 metadata:
-  name: GITLAB_CI_ENV_SLUG-hotrod-frontend
+  name: hotrod-frontend
+  namespace: hotrod
 spec:
   selector:
     matchLabels:
       appName: hotrod-frontend
-  replicas: REPLICA_COUNT
+  replicas: 3
   template:
     metadata:
       labels:
         appName: hotrod-frontend
-        track: APPLICATION_TRACK
-        app: GITLAB_CI_ENV_SLUG
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
     spec:
       containers:
       - name: hotrod-frontend
-        image: registry.hub.docker.com/willwangkelda/hotrod-frontend:COMMITID
+        image: index.docker.io/willwangkelda/hotrod-frontend
         command: ["/go/bin/hotrod", "frontend"]
         env:
         - name: GET_HOSTS_FROM
