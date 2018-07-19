@@ -4,8 +4,8 @@
 [[projects]]
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
-  revision = "327ebb6c2b6df8bf075da02ef45a2a034e9b79ba"
-  version = "0.11.0"
+  revision = "53dd39833a08ce33582e5ff31fa18bb4735d6731"
+  version = "0.9.3"
 
 [[projects]]
   branch = "master"
@@ -56,7 +56,7 @@
   branch = "master"
   name = "github.com/kelda-inc/hotrod-customer"
   packages = ["customer"]
-  revision = "d1911de532c609c916f12f0d9c6c57425c2eeafc"
+  revision = "6ed2e3de46da882e63e4b90e28092a0cf46776f7"
 
 [[projects]]
   branch = "master"
@@ -65,13 +65,13 @@
     "driver",
     "driver/thrift-gen/driver"
   ]
-  revision = "339b3464f2bbbdd3b31acde9a0fe38a8ebe8f0b2"
+  revision = "6110f8a215fc941249983fc9e61d3986e181db98"
 
 [[projects]]
   branch = "master"
   name = "github.com/kelda-inc/hotrod-route"
   packages = ["route"]
-  revision = "62993db7851858d53e9637b19dceb1cfcab6974f"
+  revision = "315f51cec31c1e230d387850a324eb74c996e674"
 
 [[projects]]
   branch = "master"
@@ -111,7 +111,7 @@
   branch = "master"
   name = "github.com/prometheus/client_model"
   packages = ["go"]
-  revision = "99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c"
+  revision = "5c3871d89910bfb32f5fcab2aa4b9ec68e65a99f"
 
 [[projects]]
   branch = "master"
@@ -178,7 +178,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
+  revision = "a2144134853fc9a27a7b1e3eb4f19f1a76df13c9"
 
 [[projects]]
   branch = "master"
@@ -191,7 +191,7 @@
     "ipv4",
     "ipv6"
   ]
-  revision = "039a4258aec0ad3c79b905677cceeab13b296a77"
+  revision = "a680a1efc54dd51c040b3b5ce4939ea3cf2ea0d1"
 
 [[projects]]
   branch = "master"
@@ -200,7 +200,7 @@
     "unix",
     "windows"
   ]
-  revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
+  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
 
 [solve-meta]
   analyzer-name = "dep"
