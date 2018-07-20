@@ -11,4 +11,4 @@ def test(host, port):
 
 if __name__ == '__main__':
 
-	test(sys.argv[1], 8080)
+	test(sys.argv[1], 80)
