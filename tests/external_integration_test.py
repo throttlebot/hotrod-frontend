@@ -1,5 +1,4 @@
 import requests, time, sys
-from detect import detect
 
 """
 Checks that the server returns a valid response
@@ -12,4 +11,4 @@ def test(host, port):
 
 if __name__ == '__main__':
 
-	test(detect(sys.argv[1]), 8080)
+	test(sys.argv[1], 8080)
