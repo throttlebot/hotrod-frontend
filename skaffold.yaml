@@ -6,4 +6,4 @@ build:
 deploy:
   kubectl:
     manifests:
-      - manifests/hotrod.yaml
+      - manifests/deployment.yaml
