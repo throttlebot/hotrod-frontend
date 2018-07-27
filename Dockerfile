@@ -9,4 +9,7 @@ RUN mkdir -p /go/bin
 ADD . /go/src/github.com/kelda-inc/hotrod-frontend
 WORKDIR /go/src/github.com/kelda-inc/hotrod-frontend
 
-ENTRYPOINT ["go", "run", "main.go", "frontend"]
+RUN go build -o hotrod main.go
+RUN mv hotrod /go/bin/
+
+ENTRYPOINT ["/go/bin/hotrod", "frontend"]
