@@ -24,6 +24,7 @@ import (
 	"github.com/kelda-inc/hotrod-base/config"
 
 	"os"
+	"time"
 )
 
 // Redis is a simulator of remote Redis cache
@@ -47,7 +48,7 @@ func newRedis() *Redis {
 func (r *Redis) FindDriverIDs(ctx context.Context, location string) ([]string, error) {
 	// simulate RPC delay
 	delay.Sleep(config.RedisFindDelay, config.RedisFindDelayStdDev)
-	return r.Keys("*").Result()
+	return r.Keys("T7*").Result()
 }
 
 // GetDriver returns driver and the current car location
@@ -64,4 +65,17 @@ func (r *Redis) GetDriver(ctx context.Context, driverID string) (Driver, error) 
 		DriverID: driverID,
 		Location: driver,
 	}, nil
+}
+
+// AttemptLock calls SETNX and returns if the lock was acquired
+func (r *Redis) AttemptLock(ctx context.Context, id string) bool {
+	// simulate RPC delay
+	time.Sleep(time.Millisecond * 1500)
+	return r.SetNX("lock-" + id, 1, time.Minute).Val()
+}
+
+func (r *Redis) Unlock(id string) {
+	// simulate RPC delay
+	time.Sleep(time.Millisecond * 1500)
+	r.Del("lock-" + id)
 }

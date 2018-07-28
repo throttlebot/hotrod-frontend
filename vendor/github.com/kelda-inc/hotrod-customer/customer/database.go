@@ -22,6 +22,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"os"
 	"fmt"
+	"strconv"
 )
 
 // database simulates Customer repository implemented on top of an SQL database
@@ -47,6 +48,8 @@ func (d *database) Get(ctx context.Context, customerID string) (*Customer, error
 	return &customer, err
 }
 
+
+
 func (d *database) List(ctx context.Context ) ([]Customer, error) {
 	log.Info("Loading all customers")
 	rows, err := d.Query("SELECT name, id FROM customers")
@@ -66,4 +69,43 @@ func (d *database) List(ctx context.Context ) ([]Customer, error) {
 	}
 
 	return customers, rows.Err()
+}
+
+
+func(d *database) Transfer(ctx context.Context, to, from, amount string) error {
+	i, err := strconv.Atoi(amount)
+	if err != nil {
+		return err
+	}
+
+	// Check if from account exists and has enough money
+	account := Account{ID: from}
+	err = d.QueryRow("SELECT balance FROM accounts WHERE id = $1", from).Scan(
+		&account.Balance)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("account %s does not exist")
+	} else if err != nil {
+		return err
+	} else if account.Balance - i <= 0 {
+		return fmt.Errorf("account %s does not have anough money: %d",account.ID, account.Balance)
+	}
+
+	// Checks if to account exists and if not init the new account
+	account = Account{ID: to}
+	err = d.QueryRow("SELECT balance FROM accounts WHERE id = $1", to).Scan(
+		&account.Balance)
+	if err == sql.ErrNoRows {
+		_, err = d.Exec("INSERT INTO accounts VALUES ($1, $2)", to, 0)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Transfer money (assume that this does NOT fail!)
+	_, err = d.Exec("UPDATE accounts SET balance = balance - $1 WHERE id = $2", amount, from)
+	if err != nil {
+		return err
+	}
+	_, err = d.Exec("UPDATE accounts SET balance = balance + $1 WHERE id = $2", amount, to)
+	return err
 }

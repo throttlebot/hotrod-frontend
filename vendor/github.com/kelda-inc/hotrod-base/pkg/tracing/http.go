@@ -50,6 +50,9 @@ func (c *HTTPClient) GetJSON(ctx context.Context, endpoint string, url string, o
 		}
 		return errors.New(string(body))
 	}
+	if out == nil {
+		return nil
+	}
 	decoder := json.NewDecoder(res.Body)
 	return decoder.Decode(out)
 }

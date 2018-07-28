@@ -81,3 +81,24 @@ func fromThrift(results []*driver.DriverLocation) []Driver {
 	}
 	return retMe
 }
+
+// Lock places a lock on the ID and is used to alter balances
+func (c *Client) Lock(ctx context.Context, id string) {
+	log.WithField("id", id).Info("Securing lock")
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Minute)
+	defer cancel()
+	_, err := c.client.Lock(thrift.Wrap(ctx), id)
+	if err != nil {
+		log.Error(err.Error())
+	}
+}
+
+func (c *Client) Unlock(ctx context.Context, id string) {
+	log.WithField("id", id).Info("releasing lock")
+	ctx, cancel := context.WithTimeout(ctx, 100*time.Minute)
+	defer cancel()
+	_, err := c.client.Unlock(thrift.Wrap(ctx), id)
+	if err != nil {
+		log.Error(err.Error())
+	}
+}

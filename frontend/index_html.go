@@ -51,8 +51,33 @@ function formatDuration(duration) {
   return Math.round(d) + units;
 }
 
+function Refund(request) {
+    req = requestsCancellable[request]
+    if (req == undefined) {
+       $("#hotrod-log").prepend('<div class="fresh-car">Request ' + request + ' has already been refunded.</div>')
+       return
+    }
+    var textBox = $($("#hotrod-log").prepend('<div class="fresh-car"><b>Canceling request ' + request + '</b></div>').children()[0])
+	$.ajax('/refund?driver=' + req.Driver + '&customer=' + req.Customer, {
+        method: 'GET',
+        success: function(data, textStatus) {
+          delete requestsCancellable[request]
+	       textBox.html('Request '  + request + ' cancelled')
+        },
+        error: function(xhr, error){
+            if (xhr.status != 200) {
+         		textBox.html('Request '  + request + ' cancellation failed')
+			} else {
+                delete requestsCancellable[request]
+				textBox.html('Request '  + request + ' cancelled')
+			}
+		},
+    })
+}
+
 var clientUUID = Math.round(Math.random() * 10000);
 var lastRequestID = 0;
+var requestsCancellable = {}
 
 $(".uuid").html("Your web client's id: <strong>" + clientUUID + "</strong>");
 
@@ -72,8 +97,9 @@ $(".hotrod-button").click(function(evt) {
     success: function(data, textStatus) {
       var after = Date.now();
       console.log(data);
+      requestsCancellable[" " + requestID] = {Driver: data.Driver, Customer: customer}
       var duration = formatDuration(data.ETA);
-      freshCar.html('HotROD <b>' + data.Driver + '</b> arriving in ' + duration + ' [req: ' + requestID + ', latency: ' + (after-before) + 'ms]');
+      freshCar.html('HotROD <b>' + data.Driver + '</b> arriving in ' + duration + ' [req: ' + requestID + ', latency: ' + (after-before) + 'ms] <a href="#" onclick="Refund(&#39 ' + requestID + '&#39); return false">Cancel</a>');
     },
   });
 });

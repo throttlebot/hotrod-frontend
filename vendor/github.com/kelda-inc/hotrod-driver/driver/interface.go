@@ -25,4 +25,6 @@ type Driver struct {
 // Interface exposed by the Driver service.
 type Interface interface {
 	FindNearest(ctx context.Context, location string) ([]Driver, error)
+	Lock(ctx context.Context, id string)
+	Unlock(ctx context.Context, id string)
 }

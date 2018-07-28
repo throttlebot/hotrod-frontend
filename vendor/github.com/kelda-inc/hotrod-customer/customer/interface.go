@@ -27,4 +27,11 @@ type Customer struct {
 type Interface interface {
 	Get(ctx context.Context, customerID string) (*Customer, error)
 	ListCustomerPublicInfo(ctx context.Context) ([]Customer, error)
+	Transfer(ctx context.Context, to, from string, amount int) error
+}
+
+// Account contains data about an account
+type Account struct {
+	ID		string
+	Balance	int
 }

@@ -15,6 +15,8 @@ import (
 // TChanDriver is the interface that defines the server handler and client interface.
 type TChanDriver interface {
 	FindNearest(ctx thrift.Context, location string) ([]*DriverLocation, error)
+	Lock(ctx thrift.Context, id string) (*Result_, error)
+	Unlock(ctx thrift.Context, id string) (*Result_, error)
 }
 
 // Implementation of a client and service handler.
@@ -43,6 +45,42 @@ func (c *tchanDriverClient) FindNearest(ctx thrift.Context, location string) ([]
 	}
 	success, err := c.client.Call(ctx, c.thriftService, "findNearest", &args, &resp)
 	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for findNearest")
+		}
+	}
+
+	return resp.GetSuccess(), err
+}
+
+func (c *tchanDriverClient) Lock(ctx thrift.Context, id string) (*Result_, error) {
+	var resp DriverLockResult
+	args := DriverLockArgs{
+		ID: id,
+	}
+	success, err := c.client.Call(ctx, c.thriftService, "lock", &args, &resp)
+	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for lock")
+		}
+	}
+
+	return resp.GetSuccess(), err
+}
+
+func (c *tchanDriverClient) Unlock(ctx thrift.Context, id string) (*Result_, error) {
+	var resp DriverUnlockResult
+	args := DriverUnlockArgs{
+		ID: id,
+	}
+	success, err := c.client.Call(ctx, c.thriftService, "unlock", &args, &resp)
+	if err == nil && !success {
+		switch {
+		default:
+			err = fmt.Errorf("received no result or unknown exception for unlock")
+		}
 	}
 
 	return resp.GetSuccess(), err
@@ -67,6 +105,8 @@ func (s *tchanDriverServer) Service() string {
 func (s *tchanDriverServer) Methods() []string {
 	return []string{
 		"findNearest",
+		"lock",
+		"unlock",
 	}
 }
 
@@ -74,6 +114,10 @@ func (s *tchanDriverServer) Handle(ctx thrift.Context, methodName string, protoc
 	switch methodName {
 	case "findNearest":
 		return s.handleFindNearest(ctx, protocol)
+	case "lock":
+		return s.handleLock(ctx, protocol)
+	case "unlock":
+		return s.handleUnlock(ctx, protocol)
 
 	default:
 		return false, nil, fmt.Errorf("method %v not found in service %v", methodName, s.Service())
@@ -90,6 +134,46 @@ func (s *tchanDriverServer) handleFindNearest(ctx thrift.Context, protocol athri
 
 	r, err :=
 		s.handler.FindNearest(ctx, req.Location)
+
+	if err != nil {
+		return false, nil, err
+	} else {
+		res.Success = r
+	}
+
+	return err == nil, &res, nil
+}
+
+func (s *tchanDriverServer) handleLock(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	var req DriverLockArgs
+	var res DriverLockResult
+
+	if err := req.Read(protocol); err != nil {
+		return false, nil, err
+	}
+
+	r, err :=
+		s.handler.Lock(ctx, req.ID)
+
+	if err != nil {
+		return false, nil, err
+	} else {
+		res.Success = r
+	}
+
+	return err == nil, &res, nil
+}
+
+func (s *tchanDriverServer) handleUnlock(ctx thrift.Context, protocol athrift.TProtocol) (bool, athrift.TStruct, error) {
+	var req DriverUnlockArgs
+	var res DriverUnlockResult
+
+	if err := req.Read(protocol); err != nil {
+		return false, nil, err
+	}
+
+	r, err :=
+		s.handler.Unlock(ctx, req.ID)
 
 	if err != nil {
 		return false, nil, err

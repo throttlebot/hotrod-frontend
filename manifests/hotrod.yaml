@@ -36,7 +36,8 @@ spec:
     spec:
       containers:
       - name: hotrod-frontend
-        image: index.docker.io/willwangkelda/hotrod-frontend
+        imagePullPolicy: IfNotPresent
+        image: index.docker.io/willwangkelda/hotrod-frontend:test-transacts
         command: ["/go/bin/hotrod", "frontend"]
         env:
         - name: GET_HOSTS_FROM

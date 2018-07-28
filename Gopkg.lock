@@ -25,8 +25,8 @@
     "internal/singleflight",
     "internal/util"
   ]
-  revision = "83fb42932f6145ce52df09860384a4653d2d332a"
-  version = "v6.12.0"
+  revision = "480db94d33e6088e08d628833b6c0705451d24bb"
+  version = "v6.13.2"
 
 [[projects]]
   name = "github.com/golang/protobuf"
@@ -50,13 +50,13 @@
     "pkg/pool",
     "pkg/tracing"
   ]
-  revision = "1b4b1be1ff48a8269837aaa62fe8e1dcf8486a00"
+  revision = "1681c14190500948736dfd4bf083f8d2bcc906f1"
 
 [[projects]]
   branch = "master"
   name = "github.com/kelda-inc/hotrod-customer"
   packages = ["customer"]
-  revision = "6ed2e3de46da882e63e4b90e28092a0cf46776f7"
+  revision = "23add9a8597c0cfbeaf0937181f72e7b51786542"
 
 [[projects]]
   branch = "master"
@@ -65,13 +65,13 @@
     "driver",
     "driver/thrift-gen/driver"
   ]
-  revision = "6110f8a215fc941249983fc9e61d3986e181db98"
+  revision = "bc2907a1efbd7b9812d20ef5b012c1d7efd0b135"
 
 [[projects]]
   branch = "master"
   name = "github.com/kelda-inc/hotrod-route"
   packages = ["route"]
-  revision = "315f51cec31c1e230d387850a324eb74c996e674"
+  revision = "23d9e3a9b8b8cc4a87c252503351a1705c15c108"
 
 [[projects]]
   branch = "master"
@@ -132,13 +132,13 @@
     "nfs",
     "xfs"
   ]
-  revision = "ae68e2d4c00fed4943b5f6698d504a5fe083da8a"
+  revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
-  version = "v1.0.5"
+  revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
+  version = "v1.0.6"
 
 [[projects]]
   name = "github.com/spf13/cobra"
@@ -178,7 +178,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "a2144134853fc9a27a7b1e3eb4f19f1a76df13c9"
+  revision = "c126467f60eb25f8f27e5a981f32a87e3965053f"
 
 [[projects]]
   branch = "master"
@@ -191,7 +191,7 @@
     "ipv4",
     "ipv6"
   ]
-  revision = "a680a1efc54dd51c040b3b5ce4939ea3cf2ea0d1"
+  revision = "3673e40ba22529d22c3fd7c93e97b0ce50fa7bdd"
 
 [[projects]]
   branch = "master"
@@ -200,7 +200,7 @@
     "unix",
     "windows"
   ]
-  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
+  revision = "bd9dbc187b6e1dacfdd2722a87e83093c2d7bd6e"
 
 [solve-meta]
   analyzer-name = "dep"

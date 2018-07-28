@@ -24,6 +24,7 @@ import (
 	"github.com/kelda-inc/hotrod-base/pkg/tracing"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"fmt"
 )
 
 // Server implements Customer service
@@ -54,6 +55,7 @@ func (s *Server) Run() error {
 func (s *Server) createServeMux() http.Handler {
 	mux := tracing.NewServeMux()
 	mux.Handle("/customer", http.HandlerFunc(s.customer))
+	mux.Handle("/transfer", http.HandlerFunc(s.transfer))
 	mux.Handle("/list", http.HandlerFunc(s.listCustomers))
 	mux.Handle("/metrics", promhttp.Handler())
 	return mux
@@ -107,4 +109,23 @@ func (s *Server) listCustomers(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
+}
+
+func (s *Server) transfer(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	toID := r.Form.Get("to")
+	fromID := r.Form.Get("from")
+	amount := r.Form.Get("amount")
+	if toID == "" || fromID == "" || amount == "" {
+		http.Error(w, fmt.Sprintf("Missing field: to=%s, from=%s, amount=%s", toID, fromID, amount), http.StatusBadRequest)
+		return
+	}
+
+	err := s.database.Transfer(ctx, toID, fromID, amount)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte("success"))
 }

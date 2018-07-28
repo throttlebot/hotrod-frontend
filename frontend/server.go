@@ -24,14 +24,13 @@ import (
 	"github.com/kelda-inc/hotrod-base/pkg/tracing"
 	"github.com/kelda-inc/hotrod-customer/customer"
 
-	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"strconv"
-	"time"
 )
 
 // Server implements jaeger-demo-frontend service
+// New comment
 type Server struct {
 	customerClient customer.Interface
 	hostPort       string
@@ -69,6 +68,7 @@ func (s *Server) createServeMux() http.Handler {
 	mux := tracing.NewServeMux()
 	mux.Handle("/", http.HandlerFunc(s.home))
 	mux.Handle("/dispatch", http.HandlerFunc(s.dispatch))
+	mux.Handle("/refund", http.HandlerFunc(s.refund))
 	mux.Handle("/metrics", promhttp.Handler())
 	return mux
 }
@@ -110,11 +110,6 @@ func (s *Server) dispatch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	if customerID == "123" {
-		var cancel func()
-		ctx, cancel = context.WithTimeout(r.Context(), time.Millisecond)
-		defer cancel()
-	}
 
 	// TODO distinguish between user errors (such as invalid customer ID) and server failures
 	response, err := s.bestETA.Get(ctx, customerID)
@@ -131,9 +126,41 @@ func (s *Server) dispatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 
 	httpReqs.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method, r.URL.Path).Inc()
 
+	go s.bestETA.Transact(response.Driver, customerID, 5)
+
+
 }
+
+func (s *Server) refund(w http.ResponseWriter, r *http.Request) {
+	log.WithField("method", r.Method).WithField("url", r.URL).Info("HTTP request received")
+	if err := r.ParseForm(); httperr.HandleError(w, err, http.StatusBadRequest) {
+		log.WithError(err).Error("bad request")
+		httpReqs.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method, r.URL.Path).Inc()
+		return
+	}
+	customerID := r.Form.Get("customer")
+	if customerID == "" {
+		http.Error(w, "Missing required 'customer' parameter", http.StatusBadRequest)
+		return
+	}
+	driverID := r.Form.Get("driver")
+	if driverID == "" {
+		http.Error(w, "Missing required 'driver' parameter", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.bestETA.Transact(customerID, driverID, 5); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte("success"))
+
+}
+

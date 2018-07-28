@@ -62,8 +62,14 @@ func (c *Client) ListCustomerPublicInfo(ctx context.Context) ([]Customer, error)
 	log.Info("Getting all customers")
 	url := c.address + "/list"
 	var customers []Customer
-	if err := c.client.GetJSON(ctx, "/customer", url, &customers); err != nil {
+	if err := c.client.GetJSON(ctx, "/list", url, &customers); err != nil {
 		return nil, err
 	}
 	return customers, nil
+}
+
+func (c *Client) Transfer(ctx context.Context, to, from string, amount int) error {
+	log.Infof("Transferring balance of %d from %s to %s", amount, from, to)
+	url := fmt.Sprintf(c.address + "/transfer?to=%s&from=%s&amount=%d", to, from, amount)
+	return c.client.GetJSON(ctx, "/customer", url, nil)
 }

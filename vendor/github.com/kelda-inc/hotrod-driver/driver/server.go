@@ -20,6 +20,7 @@ import (
 	"github.com/uber/tchannel-go/thrift"
 
 	"github.com/kelda-inc/hotrod-driver/driver/thrift-gen/driver"
+	"time"
 )
 
 // Server implements jaeger-demo-frontend service
@@ -96,4 +97,22 @@ func (s *Server) FindNearest(ctx thrift.Context, location string) ([]*driver.Dri
 	}
 	log.WithField("num_drivers", len(retMe)).Info("Search successful")
 	return retMe, nil
+}
+
+// Lock uses redis to implement a lock on an account
+func (s *Server) Lock(ctx thrift.Context, id string) (*driver.Result_, error) {
+	log.WithField(id, id).Info("Attempting to secure lock")
+	for !s.redis.AttemptLock(ctx, id) {
+		time.Sleep(time.Millisecond * 100)
+	}
+	log.WithField(id, id).Info("Secured lock")
+	return &driver.Result_{}, nil
+}
+
+// Lock uses redis to implement a lock on an account
+func (s *Server) Unlock(ctx thrift.Context, id string) (*driver.Result_, error) {
+	log.WithField(id, id).Info("Releasing lock")
+	s.redis.Unlock(id)
+	log.WithField(id, id).Info("Released lock")
+	return &driver.Result_{}, nil
 }
