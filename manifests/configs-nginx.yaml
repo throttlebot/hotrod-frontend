@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-configs
+  namespace: hotrod
+data:
+  config: |
+    server {
+        listen       80;
+        server_name  localhost;
+
+        location = / {
+            proxy_pass http://storage.googleapis.com/hotrod-kelda/files/index.html;
+        }
+
+        error_page  404              /404.html;
+    }

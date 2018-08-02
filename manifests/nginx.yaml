@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hotrod-nginx
+  labels:
+    app: nginx
+  namespace: hotrod
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    protocol: TCP
+    name: http
+  - port: 443
+    protocol: TCP
+    name: https
+  selector:
+    app: nginx
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: hotrod
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+        - containerPort: 443
+        volumeMounts:
+              - name: nginx-configs
+                mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: nginx-configs
+          configMap:
+            name: nginx-configs
+            items:
+              - key: config
+                path: default.conf

@@ -66,14 +66,14 @@ func (s *Server) Run() error {
 
 func (s *Server) createServeMux() http.Handler {
 	mux := tracing.NewServeMux()
-	mux.Handle("/", http.HandlerFunc(s.home))
+	mux.Handle("/customers", http.HandlerFunc(s.customers))
 	mux.Handle("/dispatch", http.HandlerFunc(s.dispatch))
 	mux.Handle("/refund", http.HandlerFunc(s.refund))
 	mux.Handle("/metrics", promhttp.Handler())
 	return mux
 }
 
-func (s *Server) home(w http.ResponseWriter, r *http.Request) {
+func (s *Server) customers(w http.ResponseWriter, r *http.Request) {
 	log.WithField("method", r.Method).WithField("url", r.URL).Info("HTTP")
 
 	customers, err := s.customerClient.ListCustomerPublicInfo(r.Context())
@@ -83,14 +83,13 @@ func (s *Server) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	indexHTMLData := struct{ Customers []customer.Customer }{customers}
-	if err := indexHTML.Execute(w, indexHTMLData); httperr.HandleError(w, err, http.StatusInternalServerError) {
-		log.WithError(err).Error("Failed to generate index response")
-		httpReqs.WithLabelValues(strconv.Itoa(http.StatusInternalServerError), r.Method, r.URL.Path).Inc()
-		return
-	}
+	data, err := json.Marshal(customers)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 
 	httpReqs.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method, r.URL.Path).Inc()
+
 
 }
 

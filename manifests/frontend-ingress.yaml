@@ -12,5 +12,9 @@ spec:
       paths:
       - path: /
         backend:
+          serviceName: hotrod-nginx
+          servicePort: 80
+      - path: /api
+        backend:
           serviceName: hotrod-frontend
           servicePort: 8080
