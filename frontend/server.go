@@ -66,9 +66,9 @@ func (s *Server) Run() error {
 
 func (s *Server) createServeMux() http.Handler {
 	mux := tracing.NewServeMux()
-	mux.Handle("/customers", http.HandlerFunc(s.customers))
-	mux.Handle("/dispatch", http.HandlerFunc(s.dispatch))
-	mux.Handle("/refund", http.HandlerFunc(s.refund))
+	mux.Handle("/api/customers", http.HandlerFunc(s.customers))
+	mux.Handle("/api/dispatch", http.HandlerFunc(s.dispatch))
+	mux.Handle("/api/refund", http.HandlerFunc(s.refund))
 	mux.Handle("/metrics", promhttp.Handler())
 	return mux
 }

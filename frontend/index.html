@@ -22,14 +22,7 @@
     <center>
         <h1>Hot R.O.D.</h1>
         <h4><em>Rides by Will</em></h4>
-        <div class="row">
-        {{range .Customers}}
-            <div class="col-md-3 col-sm-6">
-					<span
-                            class="btn btn-info btn-block hotrod-button"
-                            data-customer="{{.ID}}">{{.Name}}</span>
-            </div>
-        {{end}}
+        <div class="row" id="customer-btns">
         </div>
         <div id="tip">Click on customer name above to order a car.</div>
         <div id="hotrod-log" class="lead"></div>
@@ -75,7 +68,21 @@
 
     $(".uuid").html("Your web client's id: <strong>" + clientUUID + "</strong>");
 
-    $(".hotrod-button").click(function(evt) {
+    $.ajax('/api/customers', {
+        method: 'GET',
+        dataType: 'json',
+        success: function(data, textStatus) {
+            for (var i = 0; i < data.length; i++) {
+                $("#customer-btns").append('<div class="col-md-3 col-sm-6">' +
+                        '<span class="btn btn-info btn-block hotrod-button" data-customer="' + data[i]["ID"] + '">' + data[i]["Name"] +
+                        '</span></div>')
+            }
+        },
+    });
+
+
+    $(document).on('click', '.hotrod-button', function(evt) {
+        console.log("Hello");
         lastRequestID++;
         var requestID = clientUUID + "-" + lastRequestID;
         var freshCar = $($("#hotrod-log").prepend('<div class="fresh-car"><em>Dispatching a car...[req: '+requestID+']</em></div>').children()[0]);

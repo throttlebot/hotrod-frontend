@@ -11,7 +11,7 @@ spec:
   ports:
   - name: http-hotrod-frontend
     port: 8080
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     appName: hotrod-frontend
 ---
@@ -36,7 +36,7 @@ spec:
       containers:
       - name: hotrod-frontend
         imagePullPolicy: IfNotPresent
-        image: index.docker.io/willwangkelda/hotrod-frontend:3979d69a097b550544457cbc64aa4960d879646c
+        image: index.docker.io/willwangkelda/hotrod-frontend:customer-test-2
         command: ["/go/bin/hotrod", "frontend"]
         env:
         - name: GET_HOSTS_FROM
