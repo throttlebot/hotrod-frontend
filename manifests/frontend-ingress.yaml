@@ -18,3 +18,7 @@ spec:
         backend:
           serviceName: hotrod-frontend
           servicePort: 8080
+      - path: /map
+        backend:
+          serviceName: hotrod-mapper
+          servicePort: 8084

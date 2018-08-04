@@ -6,7 +6,6 @@
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-
     <style>
         .uuid { margin-top: 15px; }
         .hotrod-button { padding: 20px; cursor: pointer; margin-top: 10px; }
@@ -25,6 +24,7 @@
         <div class="row" id="customer-btns">
         </div>
         <div id="tip">Click on customer name above to order a car.</div>
+        <img id="map" style="height: 400px">
         <div id="hotrod-log" class="lead"></div>
     </center>
 </div>
@@ -103,6 +103,7 @@
                 freshCar.html('HotROD <b>' + data.Driver + '</b> arriving in ' + duration + ' [req: ' + requestID + ', latency: ' + (after-before) + 'ms] <a href="#" onclick="Refund(&#39 ' + requestID + '&#39); return false">Cancel</a>');
             },
         });
+        $("#map").attr("src","/map?t=" + new Date().getTime());
     });
 
 </script>
