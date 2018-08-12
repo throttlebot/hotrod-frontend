@@ -25,7 +25,7 @@ import (
 
 // frontendCmd represents the frontend command
 var frontendCmd = &cobra.Command{
-	Use:   "frontend",
+	Use:   "api",
 	Short: "Starts Frontend service",
 	Long:  `Starts Frontend service.`,
 	RunE: func(cmd *cobra.Command, args []string) error {

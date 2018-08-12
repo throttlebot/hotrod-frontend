@@ -62,17 +62,12 @@ $(document).on('click', '.hotrod-button', function(evt) {
         headers: headers,
         method: 'GET',
         success: function(data, textStatus) {
+            display_map();
             var after = Date.now();
             console.log(data);
             requestsCancellable[" " + requestID] = {Driver: data.Driver, Customer: customer}
             var duration = formatDuration(data.ETA);
             freshCar.html('HotROD <b>' + data.Driver + '</b> arriving in ' + duration + ' [req: ' + requestID + ', latency: ' + (after-before) + 'ms] <a href="#" onclick="Refund(&#39 ' + requestID + '&#39); return false">Cancel</a>');
-            $("#map").attr("src","/map?t=" + new Date().getTime());
-            driverX = data.DriverLocation.split(",")[0];
-            driverY = data.DriverLocation.split(",")[1];
-            customerX = data.CustomerLocation.split(",")[0];
-            customerY = data.CustomerLocation.split(",")[1];
-            display_route(driverX, driverY, customerX, customerY);
         },
     });
 });
@@ -102,10 +97,31 @@ function new_svg() {
 }
 
 function color_link(link) {
-    if (link["color"] != undefined) {
-        return "stroke:" + link.color +  ";stroke-width:3";
+    var color = "gray";
+    if (link["weight"] != undefined) {
+        if (link.weight == 1) {
+            color = "yellow";
+        } else if (link.weight == 2) {
+            color = "orange";
+        } else {
+            color = "red";
+        }
     }
-    return "stroke:gray;stroke-width:1";
+    return "stroke:" + color +  ";stroke-width:3";
+}
+
+function color_node(node) {
+    var color = "gray";
+    if (node["level"] != undefined) {
+        if (node.level == 1) {
+            color = "yellow";
+        } else if (node.level == 2) {
+            color = "orange";
+        } else {
+            color = "red";
+        }
+    }
+    return "fill:" + color +  ";";
 }
 
 function RenderGraph(json) {
@@ -120,10 +136,10 @@ function RenderGraph(json) {
 
     svg.selectAll("circle").data(json.nodes)
         .enter().append("circle")
-        .attr("r", 0.5)
+        .attr("r", 5)
         .attr("cx", function(d) { return x(d.x); })
         .attr("cy", function(d) { return y(d.y); })
-        .attr("style", "fill:gray;");
+        .attr("style", color_node);
 
     svg.selectAll("line").data(json.links)
         .enter().append("line")
@@ -181,36 +197,16 @@ function RenderPath(json) {
 
 }
 
-function display_route(x, y, z, w) {
-    svg = new_svg();
-    $.ajax('/map/location', {
-        method: 'GET',
-        dataType: 'json',
-        data: {"x": x, "y": y, "z": z, "w": w},
-        success: function(data, textStatus) {
-            RenderGraph(data);
-            $.ajax('/map/route', {
-                method: 'GET',
-                dataType: 'json',
-                data: {"x": x, "y": y, "z": z, "w": w},
-                success: function(data, textStatus) {
-                    RenderPath(data);
-                },
-            });
-        },
-    });
-}
 
-function display_map(x, y, z, w) {
+function display_map() {
     svg = new_svg();
     $.ajax('/map/location', {
         method: 'GET',
         dataType: 'json',
-        data: {"x": x, "y": y, "z": z, "w": w},
         success: function(data, textStatus) {
             RenderGraph(data);
         }
     });
 }
 
-display_map(0, 0, 5 , 5);
+display_map();

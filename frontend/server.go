@@ -131,9 +131,6 @@ func (s *Server) dispatch(w http.ResponseWriter, r *http.Request) {
 
 	httpReqs.WithLabelValues(strconv.Itoa(http.StatusOK), r.Method, r.URL.Path).Inc()
 
-	go s.bestETA.Transact(response.Driver, customerID, 5)
-
-
 }
 
 func (s *Server) refund(w http.ResponseWriter, r *http.Request) {
