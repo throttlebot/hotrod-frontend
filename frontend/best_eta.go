@@ -40,6 +40,8 @@ type bestETA struct {
 // Response contains ETA for a trip.
 type Response struct {
 	Driver string
+	DriverLocation string
+	CustomerLocation string
 	ETA    time.Duration
 }
 
@@ -77,6 +79,8 @@ func (eta *bestETA) Get(ctx context.Context, customerID string) (*Response, erro
 		if result.route.ETA < bestETAResp.ETA {
 			bestETAResp.ETA = result.route.ETA
 			bestETAResp.Driver = result.driver
+			bestETAResp.DriverLocation = result.route.Dropoff
+			bestETAResp.CustomerLocation = result.route.Pickup
 		}
 	}
 	if bestETAResp.Driver == "" {

@@ -1,0 +1,42 @@
+<html>
+    <meta charset="ISO-8859-1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <head>
+        <title>HotROD - Rides On Demand</title>
+        <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+        <script src="http://d3js.org/d3.v3.min.js"></script>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+        <style>
+            .uuid { margin-top: 15px; }
+            .hotrod-button { padding: 20px; cursor: pointer; margin-top: 10px; }
+            .hotrod-button:hover { cursor: pointer; filter: brightness(85%); }
+            #hotrod-log { margin-top: 15px; }
+            #tip { margin-top: 15px; }
+            .links line {
+                stroke: #999;
+                stroke-opacity: 0.6;
+            }
+
+            .nodes circle {
+                stroke: #fff;
+                stroke-width: 1.5px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="uuid alert alert-info"></div>
+            <center>
+                <h1>Hot R.O.D.</h1>
+                <h4><em>Rides by Will</em></h4>
+                <div class="row" id="customer-btns"></div>
+                <div id="tip">Click on customer name above to order a car.</div>
+                <div id="svg" width="960" height="600" style="margin: 0 auto;"></div>
+                <div id="hotrod-log" class="lead"></div>
+            </center>
+        </div>
+    </body>
+    <script src="script.js"></script>
+
+</html>

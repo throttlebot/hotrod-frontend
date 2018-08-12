@@ -9,8 +9,9 @@ data:
         listen       80;
         server_name  localhost;
 
-        location = / {
-            proxy_pass http://storage.googleapis.com/hotrod-kelda/files/index.html;
+        location / {
+            root html;
+            index index.html index.htm;
         }
 
         error_page  404              /404.html;

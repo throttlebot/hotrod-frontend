@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:1.7.9
+        image: willwangkelda/hotrod-nginx
         ports:
         - containerPort: 80
         - containerPort: 443
