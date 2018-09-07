@@ -47,5 +47,5 @@ func init() {
 	RootCmd.AddCommand(frontendCmd)
 
 	frontendCmd.Flags().StringVarP(&frontendOptions.serverInterface, "bind", "", "0.0.0.0", "interface to which the frontend server will bind")
-	frontendCmd.Flags().IntVarP(&frontendOptions.serverPort, "port", "p", 8080, "port on which the frontend server will listen")
+	frontendCmd.Flags().IntVarP(&frontendOptions.serverPort, "port", "p", 80, "port on which the frontend server will listen")
 }
