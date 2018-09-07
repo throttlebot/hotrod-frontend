@@ -59,23 +59,19 @@ func (eta *bestETA) Get(ctx context.Context, customerID string) (*Response, erro
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("customer", customer).Info("Found customer")
 
 	drivers, err := eta.driver.FindNearest(ctx, customer.Location)
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("drivers", drivers).Info("Found drivers")
 
 	results := eta.getRoutes(ctx, customer, drivers)
-	log.WithField("routes", results).Info("Found routes")
 
 	bestETAResp := &Response{ETA: math.MaxInt64}
 	for _, result := range results {
 		if result.err != nil {
 			return nil, err
 		}
-		log.WithField("driver", result.driver).WithField("eta", result.route.ETA.String()).Info("Driver time")
 		if result.route.ETA < bestETAResp.ETA {
 			bestETAResp.ETA = result.route.ETA
 			bestETAResp.Driver = result.driver
@@ -87,7 +83,6 @@ func (eta *bestETA) Get(ctx context.Context, customerID string) (*Response, erro
 		return nil, errors.New("No routes found")
 	}
 
-	log.WithField("driver", bestETAResp.Driver).WithField("eta", bestETAResp.ETA.String()).Info("Dispatch successful")
 	return bestETAResp, nil
 }
 

@@ -74,8 +74,6 @@ func (s *Server) createServeMux() http.Handler {
 }
 
 func (s *Server) customers(w http.ResponseWriter, r *http.Request) {
-	log.WithField("method", r.Method).WithField("url", r.URL).Info("HTTP")
-
 	customers, err := s.customerClient.ListCustomerPublicInfo(r.Context())
 	if httperr.HandleError(w, err, http.StatusInternalServerError) {
 		log.WithError(err).Error("Failed to query customers")
@@ -94,7 +92,6 @@ func (s *Server) customers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) dispatch(w http.ResponseWriter, r *http.Request) {
-	log.WithField("method", r.Method).WithField("url", r.URL).Info("HTTP request received")
 	if err := r.ParseForm(); httperr.HandleError(w, err, http.StatusBadRequest) {
 		log.WithError(err).Error("bad request")
 		httpReqs.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method, r.URL.Path).Inc()
@@ -134,7 +131,6 @@ func (s *Server) dispatch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) refund(w http.ResponseWriter, r *http.Request) {
-	log.WithField("method", r.Method).WithField("url", r.URL).Info("HTTP request received")
 	if err := r.ParseForm(); httperr.HandleError(w, err, http.StatusBadRequest) {
 		log.WithError(err).Error("bad request")
 		httpReqs.WithLabelValues(strconv.Itoa(http.StatusBadRequest), r.Method, r.URL.Path).Inc()
