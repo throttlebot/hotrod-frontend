@@ -12,4 +12,6 @@ WORKDIR /go/src/github.com/kelda-inc/hotrod-frontend
 RUN go build -o hotrod main.go
 RUN mv hotrod /go/bin/
 
-ENTRYPOINT ["/go/bin/hotrod", "api"]
+COPY Makefile Makefile
+
+ENTRYPOINT ["make", "all"]
