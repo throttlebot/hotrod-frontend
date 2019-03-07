@@ -31,7 +31,8 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: willwangkelda/hotrod-nginx
+        image: hantaowang/hotrod-frontend
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
         - containerPort: 443
