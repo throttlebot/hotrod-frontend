@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: haproxy-mapper
+  namespace: hotrod
+  labels:
+    appName: haproxy-mapper
+spec:
+  # if your cluster supports it, uncomment the following to automatically create
+  # an external load-balanced IP for the frontend service.
+  ports:
+  - name: http-haproxy-mapper
+    port: 80
+  type: ClusterIP
+  selector:
+    appName: haproxy-mapper
+---
+apiVersion: apps/v1beta2 #  for k8s versions before 1.9.0 use apps/v1beta2  and before 1.8.0 use extensions/v1beta1
+kind: Deployment
+metadata:
+  name: haproxy-mapper
+  namespace: hotrod
+spec:
+  selector:
+    matchLabels:
+      appName: haproxy-mapper
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        appName: haproxy-mapper
+    spec:
+      containers:
+      - name: haproxy-mapper
+        imagePullPolicy: Always
+        image: index.docker.io/hantaowang/hotrod-haproxy
+        env:
+        - name: GET_HOSTS_FROM
+          value: dns
+        - name: NEXT_HOP
+          value: hotrod-mapper
+        ports:
+        - containerPort: 80
